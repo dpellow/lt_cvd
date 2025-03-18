@@ -56,12 +56,21 @@ The subjects file is a csv with the patient information in the following columns
 | MONTHS_TO_EVENT| time in months from prediction time until event or censoring | |
 
 ### Further explanations of features
-- HTN: a patient is considered hypertensive if they have a diagnosis of hypertension OR are on anti-hypertensive medication
-- LIP: a patient is considered dislipidemic if they have a diagnosis of dyslipidemia, OR are on a statin, OR have ever had a lipid lab with LDL > 4.1 or Total cholesterol > 5.2 or triglycerides > 2.3
-- CV_HISTORY/EVENT: we consider the following to be major adverse cardiovascular events: acute myocardial infarction (MI), non-MI ischemic heart disease, heart failure, arrhythmias, valvulopathy, cardiac and carotid revascularization procedures, cardiogenic shock and ischemic stroke and death from any of these. These are captured in part by ICD10 codes: I48.0, I48.1, I48.2, I48.3, I48.4, I48.9, I47, I49, I21, I22, I25.2, I50, I46, G45.3, G45.9, I25, I63, I65, I66, I67.0, I69.3, I69.4, I39.0, I39.1, I39.2, I39.3, I39.4, I42. Note this list may not be exhaustive. In particular, it does not include procedures: PCI, stenting, bypass, ablation, valve repplacement, pacemaker and defibrillator insertion, which are all indicative of a CV event.
-- ANTI_PLATELET: keywords: aspirin, asa, clopidogrel, plavix, prasugrel, ticagrelor, dipyridamole. Note - may not be an exhaustive list.
-- ANTI_HTN: keywords: Amlodipine, caduet, Lecarnidipine, Diltiazem, Verapamil, Doxazosin, Terazosin, Prazosin, Atenolol, bisoprolol, metoprolol, nadolol, nebivolol, propanolol, Ramipril, Perindopril, Captopril, Lisinopril, Enalapril, Candesartan, irbesartan, losartan, telmisartan, Hydrochlorthiazide, indapamide
-- STATIN: keywords: Atorvastatin, caduet, simvastatin, zocor, rosuvastatin, crestor, fluvastatin, Ezetimibe, Bezafibrate, fenofibrate, lipitor, lescol, lovastatin, mevacor, altoprev, livalo, zypitamag, pitavastatin, pravachol, pravastatin, ezallor, vytorin. Note: medication lists may not be exhaustive.
-- CYCLOSPORINE_TROUGH_LEVEL: if the patient is on tacrolimus, leave this empty (or 0)
-- MONTHS_TO_EVENT:
+- **HTN**: a patient is considered hypertensive if they have a diagnosis of hypertension OR are on anti-hypertensive medication
+- **LIP**: a patient is considered dislipidemic if they have a diagnosis of dyslipidemia, OR are on a statin, OR have ever had a lipid lab with LDL > 4.1 or Total cholesterol > 5.2 or triglycerides > 2.3
+- **CV_HISTORY/EVENT**: we consider the following to be major adverse cardiovascular events: acute myocardial infarction (MI), non-MI ischemic heart disease, heart failure, arrhythmias, valvulopathy, cardiac and carotid revascularization procedures, cardiogenic shock and ischemic stroke and death from any of these. <br>
+These are captured in part by ICD10 codes: I48.0, I48.1, I48.2, I48.3, I48.4, I48.9, I47, I49, I21, I22, I25.2, I50, I46, G45.3, G45.9, I25, I63, I65, I66, I67.0, I69.3, I69.4, I39.0, I39.1, I39.2, I39.3, I39.4, I42. <br>
+Note this list may not be exhaustive. In particular, _it does not include procedures_: PCI, stenting, bypass, ablation, valve repplacement, pacemaker and defibrillator insertion, which are all indicative of a CV event.
+- **ANTI_PLATELET**: keywords: aspirin, asa, clopidogrel, plavix, prasugrel, ticagrelor, dipyridamole. Note - may not be an exhaustive list.
+- **ANTI_HTN**: keywords: Amlodipine, caduet, Lecarnidipine, Diltiazem, Verapamil, Doxazosin, Terazosin, Prazosin, Atenolol, bisoprolol, metoprolol, nadolol, nebivolol, propanolol, Ramipril, Perindopril, Captopril, Lisinopril, Enalapril, Candesartan, irbesartan, losartan, telmisartan, Hydrochlorthiazide, indapamide
+- **STATIN**: keywords: Atorvastatin, caduet, simvastatin, zocor, rosuvastatin, crestor, fluvastatin, Ezetimibe, Bezafibrate, fenofibrate, lipitor, lescol, lovastatin, mevacor, altoprev, livalo, zypitamag, pitavastatin, pravachol, pravastatin, ezallor, vytorin. Note: medication lists may not be exhaustive.
+- **CYCLOSPORINE_TROUGH_LEVEL**: if the patient is on tacrolimus leave this empty (or 0)
+- **MONTHS_TO_EVENT**: This should be the time in months from the prediction timepoint until the next CV event if there is one, or until censoring time for that patient. Patients can be censored at death by non-CV cause or at end of follow-up time which could be when the patient is lost to follow-up, leaves the network, or the last date in the data pull.
+  
 ### Associating features with a prediction time
+The model predicts risk of an event within 10 years. The timepoint from which that prediction is made is the time from which the feature values are collected, and specified by YRS_SINCE_TRANS. Labs (BMI, ALP, AST, ALT, SERUM_CREATININE) should only be considered from >3 months post-transplant, and YEARS_SINCE_TRANS should be > 1. The most recent lab value prior to YRS_SINCE_TRANS and after the 3 month recovery window should be used.
+
+Health and medication statuses should be from the prediction timepoint (ie a subsequent diabetes diagnoses that occurs after YRS_SINCE_TRANS should not be considered as a positive), and include diagnoses and prescriptions from pre-transplant as well.
+Note that positive health and medication statuses should be assumed to persist - a diagnosis of hypertension or requiring statins is assumed not to reverse over time. (An exception is post-transplant diabetes, which is often transient, but usually coded differently).
+
+CV_HISTORY includes any of the CV events that occurred prior to YRS_SINCE_TRANS, including prior to transplant
