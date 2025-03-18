@@ -27,7 +27,7 @@ The subjects file is a csv with the patient information in the following columns
 | --------- | ------- | ----- |
 |ID |identifier of patient |use randomized, de-identified IDs |
 |AGE_AT_TX |age at transplant in years | |
-|CURR_AGE|age at prediction time in years |current or age at the time of labs being used |
+|CURR_AGE|age at prediction time in years |current/age at the time of labs being used |
 |YRS_SINCE_TRANS|# of years since transplant | |
 | SEX|0 for male 1 for female | |
 | SMOKER|smoking status |binary, 1 for current OR ex-smoker |
