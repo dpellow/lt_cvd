@@ -1,5 +1,13 @@
 # lt_cvd
 
+### Contents
+- [Getting Started](#getting-started)
+- [Running the Code](#running-the-code)
+- [Required Format of Subjects File](#required-format-of-subjects-file)
+  - [Further explanations of features](#further-explanations-of-features)
+  - [Associating Features with a Prediction Time](#associating-features-with-a-prediction-time)
+
+
 ### Getting started
 Clone the repo and set up your python environment. The [scikit-survival](https://scikit-survival.readthedocs.io/en/stable/install.html), [shap](https://shap.readthedocs.io/en/latest/#install), and [matplotlib](https://matplotlib.org/stable/install/index.html) packages are required.
 
@@ -44,3 +52,6 @@ The subjects file is a csv with the patient information in the following columns
 | SERUM_CREATININE| creatinine level|umol/L |
 | EVENT| whether the subject ever had an event after prediction time | 1 for event, 0 for censored |
 | MONTHS_TO_EVENT| time in months from prediction time until event or censoring | |
+
+### Further explanations of features
+### Associating features with a prediction time
