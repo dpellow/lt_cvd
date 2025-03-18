@@ -74,10 +74,11 @@ The model predicts risk of an event within 10 years. The timepoint from which th
 Health and medication statuses should be from the prediction timepoint (ie a subsequent diabetes diagnoses that occurs after YRS_SINCE_TRANS should not be considered as a positive), and include diagnoses and prescriptions from pre-transplant as well.
 Note that positive health and medication statuses should be assumed to persist - a diagnosis of hypertension or requiring statins is assumed not to reverse over time. (An exception is post-transplant diabetes, which is often transient, but usually coded differently).
 
-
-### Outputs
-The code will print out the C-index and Brier score and save 3 files in the output directory: `predictions.csv` with the predicted 10 year risk, `metrics.txt` with the C-index and Brier score metrics, and a calibration plot in `calibration.png`, 
-
 CV_HISTORY includes any of the CV events that occurred prior to YRS_SINCE_TRANS, including prior to transplant. EVENT is 1 if there is a CV event after YRS_SINCE_TRANS, and MONTHS_TO_EVENT is until the _next_ event.
 
 NOTE: There may be data to define multiple such time points per patient. For validation, pick only one per patient. Select timepoints with more recent lab measurements and lower missingness of features. Picking earlier timepoints will also allow for longer follow up times, and more observed events.
+
+
+
+### Outputs
+The code will print out the C-index and Brier score and save 3 files in the output directory: `predictions.csv` with the predicted 10 year risk, `metrics.txt` with the C-index and Brier score metrics, and a calibration plot in `calibration.png`
