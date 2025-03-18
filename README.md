@@ -38,7 +38,7 @@ The subjects file is a csv with the patient information in the following columns
 | ANTI_PLATELET|anti-platelet medication status |at prediction time |
 | ANTI_HTN|anti-hypertensive medication status |at prediction time |
 | STATIN|statin medication status |at prediction time |
-| BMI| | |
+| BMI| bmi| |
 | CANCER|HCC (liver cancer) was indication for transplant |ICD10: C22  Note: multiple indications are possible|
 | METAB|MASH was indication for transplant | ICD10: K76, K75.8 |
 | ALD|alcoholic liver disease was indication for transplant | ICD10: K70  |
