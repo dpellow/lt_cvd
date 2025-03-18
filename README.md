@@ -58,9 +58,10 @@ The subjects file is a csv with the patient information in the following columns
 ### Further explanations of features
 - HTN: a patient is considered hypertensive if they have a diagnosis of hypertension OR are on anti-hypertensive medication
 - LIP: a patient is considered dislipidemic if they have a diagnosis of dyslipidemia, OR are on a statin, OR have ever had a lipid lab with LDL > 4.1 or Total cholesterol > 5.2 or triglycerides > 2.3
-- CV_HISTORY/EVENT: we consider
-- ANTI_PLATELET:
-- ANTI_HTN:
-- STATIN:
+- CV_HISTORY/EVENT: we consider the following to be major adverse cardiovascular events: acute myocardial infarction (MI), non-MI ischemic heart disease, heart failure, arrhythmias, valvulopathy, cardiac and carotid revascularization procedures, cardiogenic shock and ischemic stroke and death from any of these. These are captured in part by ICD10 codes: I48.0, I48.1, I48.2, I48.3, I48.4, I48.9, I47, I49, I21, I22, I25.2, I50, I46, G45.3, G45.9, I25, I63, I65, I66, I67.0, I69.3, I69.4, I39.0, I39.1, I39.2, I39.3, I39.4, I42. Note this list may not be exhaustive. In particular, it does not include procedures: PCI, stenting, bypass, ablation, valve repplacement, pacemaker and defibrillator insertion, which are all indicative of a CV event.
+- ANTI_PLATELET: keywords: aspirin, asa, clopidogrel, plavix, prasugrel, ticagrelor, dipyridamole. Note - may not be an exhaustive list.
+- ANTI_HTN: keywords: Amlodipine, caduet, Lecarnidipine, Diltiazem, Verapamil, Doxazosin, Terazosin, Prazosin, Atenolol, bisoprolol, metoprolol, nadolol, nebivolol, propanolol, Ramipril, Perindopril, Captopril, Lisinopril, Enalapril, Candesartan, irbesartan, losartan, telmisartan, Hydrochlorthiazide, indapamide
+- STATIN: keywords: Atorvastatin, caduet, simvastatin, zocor, rosuvastatin, crestor, fluvastatin, Ezetimibe, Bezafibrate, fenofibrate, lipitor, lescol, lovastatin, mevacor, altoprev, livalo, zypitamag, pitavastatin, pravachol, pravastatin, ezallor, vytorin. Note: medication lists may not be exhaustive.
 - CYCLOSPORINE_TROUGH_LEVEL: if the patient is on tacrolimus, leave this empty (or 0)
+- MONTHS_TO_EVENT:
 ### Associating features with a prediction time
