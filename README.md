@@ -25,7 +25,7 @@ usage: python run_model.py --model_dir <model directory> --subjects_file <subjec
 The subjects file is a csv with the patient information in the following columns
 |Column name| Content | Notes |
 | --------- | ------- | ----- |
-|ID |identifier of patient |patients should not be identifiable |
+|ID |identifier of patient |use randomized, de-identified IDs |
 |AGE_AT_TX |age at transplant in years | |
 |CURR_AGE|age at prediction time in years |current or age at the time of labs being used |
 |YRS_SINCE_TRANS|# of years since transplant | |
