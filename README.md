@@ -75,4 +75,4 @@ Note that positive health and medication statuses should be assumed to persist -
 
 CV_HISTORY includes any of the CV events that occurred prior to YRS_SINCE_TRANS, including prior to transplant. EVENT is 1 if there is a CV event after YRS_SINCE_TRANS, and MONTHS_TO_EVENT is until the _next_ event.
 
-NOTE: There may be data to define multiple such time points per patient, for validation, pick only one per patient. Select timepoints with more recent lab measurements and lower missingness of features. Picking earlier timepoints will also allow for longer follow up times, and more observed events.
+NOTE: There may be data to define multiple such time points per patient. For validation, pick only one per patient. Select timepoints with more recent lab measurements and lower missingness of features. Picking earlier timepoints will also allow for longer follow up times, and more observed events.
