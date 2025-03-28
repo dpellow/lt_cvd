@@ -44,7 +44,7 @@ The subjects file is a csv with the patient information in the following columns
 | METAB|MASH was indication for transplant | ICD10: K76.0, K75.8 |
 | ALD|alcoholic liver disease was indication for transplant | ICD10: K70  |
 | HEP|Hepatitis B or C was indication for transplant | ICD10: B15-B19 |
-| FULM| fulminant hepatic failure (acute liver failure) was indication for transplant| ICD10: K72 |
+| FULM| fulminant hepatic failure (acute liver failure) was indication for transplant| ICD10: K72.0 |
 | IMMUNE| Autoimmune liver disease was indication for transplant | ICD10: K75.4, K74.3, K80.3 Includes PSC, PBC|
 | RE_TX| Re-transplantation| (Possibly- history of liver transplant failure: T86.4, history of liver transplant: Z94.4)  |
 | CYCLOSPORINE_TROUGH_LEVEL| medication blood level| ng/mL|
