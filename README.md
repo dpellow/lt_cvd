@@ -33,8 +33,8 @@ The subjects file is a csv with the patient information in the following columns
 | SEX|0 for male 1 for female | |
 | SMOKER|smoking status |binary, 1 for current OR ex-smoker |
 | DM|diabetes status |binary. ICD10: E10, E11 |
-| HTN|hypertension status |binary. ICD10: I10, I11, I12, I13, I14, I15  |
-| LIP| dyslipidemia status|binary. ICD10: E78, E78.5 |
+| HTN|hypertension status |binary. ICD10: I10, I11, I12, I13, I15  |
+| LIP| dyslipidemia status|binary. ICD10: E78.0-E78.6 |
 | CV_HISTORY| whether had any prior CV events | relative to prediction time, at YRS_SINCE_TRANS years post-transplant |
 | ANTI_PLATELET|anti-platelet medication status |at prediction time |
 | ANTI_HTN|anti-hypertensive medication status |at prediction time |
