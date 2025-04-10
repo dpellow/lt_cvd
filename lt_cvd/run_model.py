@@ -47,7 +47,7 @@ def preprocess(df):
         if c not in df.columns:
             if c in imp_cols:
                 print(f"Warning: {c} not in dataframe - will be imputed as a constant for all patients")
-                df[c] = np.nan
+                df[c] = 24 # 50 bins
             else:
                 print(f"Error: Feature {c} required. Update the cohort file to include this feature")
                 raise ValueError(f"Column {c} not in dataframe")
@@ -77,9 +77,9 @@ def preprocess(df):
     df.loc[((df["CYCLOSPORINE_TROUGH_LEVEL"].notna()) & (df["CYCLOSPORINE_TROUGH_LEVEL"]>0)),
                     "TACROLIMUS_TROUGH_LEVEL"] = 0
     
-    # constant imputation of nan to -1 in the impute columns
+    # constant imputation of nan to 24 (median bin) in the impute columns
     
-    df[imp_cols] = df[imp_cols].fillna(-1)
+    df[imp_cols] = df[imp_cols].fillna(24)
     
     # if any nans in the other columns - drop the row and warn
     if df[[c for c in cols if c in cols and c not in imp_cols]].isna().any().any():
