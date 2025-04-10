@@ -301,7 +301,6 @@ def process_meds(cohort, meds):
             - STATIN_<yr>
         NOTE: forward fill meds
     '''
-    # filter out any meds from before 3 months post-tx
     meds['start_date'] = pd.to_datetime(meds['start_date'], format='mixed')
     meds = meds.sort_values(['person_id', 'start_date'])
     
@@ -396,7 +395,7 @@ def get_cohort_info(cohort, processed_events, outdir):
     demo_dict['CV_EVENTS']['First'] = {'N':len(first_event_times),
                                      'Median':median,
                                      'Lower':lower_q, 'Upper':upper_q}
-    processed_events = processed_events[processed_events['diagnosis_date'] >= (processed_events['transplant_date'] + pd.DateOffset(months=3))]
+    processed_events = processed_events[processed_events['diagnosis_date'] >= (processed_events['transplant_date'] + pd.DateOffset(months=15))]
     demo_dict['CV_EVENTS']['Total'] = {'N':len(processed_events),}   
     demo_dict['CV_EVENTS']['Total']['Arrhythmia'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.ARYTHMIA_CODES)).sum().sum()
     demo_dict['CV_EVENTS']['Total']['Valvular'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.VALV_CODES)).sum().sum()
