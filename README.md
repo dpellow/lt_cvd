@@ -41,7 +41,7 @@ The subjects file is a csv with the patient information in the following columns
 | STATIN|statin medication status |at prediction time |
 | BMI| bmi| |
 | CANCER|HCC (liver cancer) was indication for transplant |ICD10: C22  Note: multiple indications are possible|
-| METAB|MASH was indication for transplant | ICD10: K76.0, K75.8 |
+| METAB|MASH was indication for transplant | ICD10: K76.0, K75.81 |
 | ALD|alcoholic liver disease was indication for transplant | ICD10: K70  |
 | HEP|Hepatitis B or C was indication for transplant | ICD10: B15-B19 |
 | FULM| fulminant hepatic failure (acute liver failure) was indication for transplant| ICD10: K72.0 |
