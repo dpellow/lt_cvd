@@ -30,14 +30,16 @@ def process_pats(pats):
         
     # drop pats with sex=nan and print warning
     missing_sex = pats.loc[pats['sex'].isna(), 'person_id'].values.tolist()
-    print(f"Dropping {len(missing_sex)} patients with missing sex values:")
-    print(missing_sex)
+    if(len(missing_sex) > 0):
+        print(f"Dropping {len(missing_sex)} patients with missing sex values:")
+        print(missing_sex)
     pats = pats[pats['sex'].notna()]
     
     # drop pats with procedure_name not in list and print warning
     nontx_pats = pats.loc[~(pats['procedure_name'].str.contains('liver transplant', case=False)), 'person_id'].values.tolist()
-    print(f"Dropping {len(nontx_pats)} patients with non-transplant procedure names:")
-    print(nontx_pats)
+    if len(nontx_pats) > 0:
+        print(f"Dropping {len(nontx_pats)} patients with non-transplant procedure names:")
+        print(nontx_pats)
     pats = pats[pats['procedure_name'].str.contains('liver transplant', case=False)]
     pats = pats.drop(columns=['procedure_name'])
     
@@ -45,15 +47,42 @@ def process_pats(pats):
     pats = pats.drop(columns=['birth_date'])
         
     # drop pats < 18 at tx
-    print(f"Dropping {len(pats[pats['age_at_tx'] < 18])} patients < 18 at transplant:")
+    if len(pats[pats['age_at_tx'] < 18]) > 0:
+        print(f"Dropping {len(pats[pats['age_at_tx'] < 18])} patients < 18 at transplant:")
     pats = pats[pats['age_at_tx'] >= 18]
-    
-    # TODO: death dates/censoring
     
     return pats
 
+
+def process_deaths(cohort, deaths):
+    ''' DEATHS_CTE table processing.
+        columns:
+            - person_id
+            - death_date -> convert to datetime
+        new colums:
+            - CENSOR_DATE -> date of death or study end date for those with no death date
+            
+    '''
+    deaths['death_date'] = pd.to_datetime(deaths['death_date'], format='mixed')
+    # merge with cohort on person_id
+    cohort = pd.merge(cohort, deaths[['person_id', 'death_date']], on='person_id', how='left')
+    # set the censor date to the death date or study end date
+    cohort['CENSOR_DATE'] = cohort['death_date'].fillna(pd.to_datetime(project_lists.STUDY_CUTOFF_DATE))
+    # drop the death date column
+    cohort = cohort.drop(columns=['death_date'])
+    
+    # drop patients censored less than 1.25 years post-transplant
+    censored = cohort[cohort['CENSOR_DATE'] < (cohort['transplant_date'] + pd.DateOffset(years=1, months=3))]
+    if len(censored) > 0:
+        print(f"Dropping {len(censored)} patients with censor date < 1.25 years post-transplant:")
+        print(censored['person_id'].values.tolist())
+
+    cohort = cohort[cohort['CENSOR_DATE'] >= (cohort['transplant_date'] + pd.DateOffset(years=1, months=3))]
+
+    return cohort
+
 def process_smoke(cohort, smoke):
-    ''' SOMKING_CTE table processing.
+    ''' SMOKING_CTE table processing.
         columns:
             - person_id
             - smoking_status -> codes for current, former, never.
@@ -61,7 +90,11 @@ def process_smoke(cohort, smoke):
         new columns:
             - SMOKER -> binary: 0 if never, 1 else.
     '''
-    smoker_ids = smoke.loc[smoke['smoking_status'] != project_lists.NONSMOKER_CODE, 'person_id'].values.tolist()
+    
+    # smoke['code'] = smoke['smoking_status'].apply(lambda x: project_lists.SMOKER_INV[x] if x in project_lists.SMOKER_INV else np.nan)
+    # smoker_ids = smoke.loc[(smoke['code'] in project_lists.SMOKER_CONCEPT_CODES), 'person_id'].values.tolist()
+    print(smoke)
+    smoker_ids = smoke.loc[smoke['smoking_status'].isin(project_lists.SMOKER_CONCEPT_CODES), 'person_id'].values.tolist()
     cohort['SMOKER'] = cohort['person_id'].apply(lambda x: 1 if x in smoker_ids else 0)
     
     return cohort
@@ -112,7 +145,7 @@ def process_inds(cohort, inds):
 
 # Helper function to apply conditions across time
 def mark_condition(cohort, dhd, condition_name, code_list):
-    end_date = pd.to_datetime('2025-04-10') # TODO: use cutoff date of data
+    end_date = pd.to_datetime(project_lists.STUDY_CUTOFF_DATE)
     max_years = int((end_date - cohort['transplant_date'].min()).days / 365.25)
     condition_df = dhd[dhd['icd10_code'].str.startswith(tuple(code_list))]
     merged = condition_df.merge(cohort[['person_id', 'transplant_date']], on='person_id', how='left')
@@ -188,7 +221,7 @@ def process_events(cohort, events):
     merged = events.merge(cohort[['person_id', 'transplant_date']], on='person_id', how='left')
 
     # Get max duration (e.g., 10 years follow-up)
-    max_years = int((pd.to_datetime('2025-04-10') - cohort['transplant_date'].min()).days / 365.25)
+    max_years = int((pd.to_datetime(project_lists.STUDY_CUTOFF_DATE) - cohort['transplant_date'].min()).days / 365.25)
 
     # Sort for quick lookup
     merged = merged.sort_values(by=['person_id', 'diagnosis_date'])
@@ -242,11 +275,11 @@ def process_labs(cohort, labs):
     labs = labs.sort_values(['person_id', 'measurement_date'])
     lab_cols = ['ALT', 'ALP', 'AST', 'BMI', 'CREATININE', 'CYCLO', 'TAC']
     
-    max_years = int((pd.to_datetime('2025-04-10') - cohort['transplant_date'].min()).days / 365.25)
+    max_years = int((pd.to_datetime(project_lists.STUDY_CUTOFF_DATE) - cohort['transplant_date'].min()).days / 365.25)
     new_cols_df = pd.DataFrame(np.nan,index=cohort.index, columns=[f'{lab}_{i}' for lab in lab_cols for i in range(1, max_years + 1)])
     cohort = pd.concat([cohort, new_cols_df], axis=1)
     for lab in lab_cols:
-        lab_subset = labs[labs['test_name'] == project_lists.LAB_IDS[lab]].copy()
+        lab_subset = labs[labs['test_name'].isin(project_lists.LABS_DICT[lab])].copy()
         for i in range(1, max_years + 1):
             col_name = f'{lab}_{i}'
 
@@ -306,10 +339,10 @@ def process_meds(cohort, meds):
     
     med_cols = ['ANTI_HTN', 'ANTI_PLATELET', 'STATIN']
     
-    max_years = int((pd.to_datetime('2025-04-10') - cohort['transplant_date'].min()).days / 365.25)
+    max_years = int((pd.to_datetime(project_lists.STUDY_CUTOFF_DATE) - cohort['transplant_date'].min()).days / 365.25)
 
     for med in med_cols:
-        med_subset = meds[meds['medication_name'].isin(project_lists.MED_IDS[med])].copy()
+        med_subset = meds[meds['medication_name'].isin(project_lists.MEDS_DICT[med])].copy()
         # keep only the first medication per patient
         med_subset = med_subset.groupby('person_id').first().reset_index()
         cohort = cohort.merge(med_subset[['person_id', 'start_date']], on='person_id', how='left')
@@ -328,7 +361,7 @@ def add_dhd(cohort, labs):
         - Any LDL > 4.1 or tryglycerides > 2.3 or Total cholesterol > 5.2 inidicative of LIP 
     '''
     
-    max_yrs = int((pd.to_datetime('2025-04-10') - cohort['transplant_date'].min()).days / 365.25)
+    max_yrs = int((pd.to_datetime(project_lists.STUDY_CUTOFF_DATE) - cohort['transplant_date'].min()).days / 365.25)
     for i in range(1, max_yrs + 1):
         cohort[f'HTN_{i}'] |= cohort[f'ANTI_HTN_{i}']
         cohort[f'LIP_{i}'] |= cohort[f'STATIN_{i}']
@@ -361,9 +394,9 @@ def get_cohort_info(cohort, processed_events, outdir):
                         'Upper': cohort['age_at_tx'].quantile(0.75)}
     demo_dict['Current, ex-smokers'] = cohort['SMOKER'].sum()
     demo_dict['Indications'] = {x:cohort[x].sum() for x in ['METAB', 'ALD', 'CANCER', 'HEP', 'FULM', 'IMMUNE', 'RE_TX']}
-    
+        
     bin_varying = ['DM', 'HTN', 'LIP', 'CV_HISTORY', 'ANTI_HTN', 'ANTI_PLATELET', 'STATIN']
-    max_years = int((pd.to_datetime('2025-04-10') - cohort['transplant_date'].min()).days / 365.25)
+    max_years = int((pd.to_datetime(project_lists.STUDY_CUTOFF_DATE) - cohort['transplant_date'].min()).days / 365.25)
     for v in bin_varying:
         demo_dict[v] = {'First':cohort[f'{v}_1'].sum(), 'Last':cohort[f'{v}_{max_years}'].sum()}
     
@@ -430,19 +463,26 @@ def get_prediction_cohort(cohort):
     '''
         For each patient, take the follow up year with the least missingness.
         If there is a tie, take the earlier one.
+        Set up the censoring dates
     '''
-    pred_cohort = cohort[['person_id', 'transplant_date', 'sex', 'age_at_tx', 'SMOKER', 'METAB', 'ALD', \
+    pred_cohort = cohort[['person_id', 'transplant_date', 'CENSOR_DATE', 'sex', 'age_at_tx', 'SMOKER', 'METAB', 'ALD', \
                           'CANCER', 'HEP', 'FULM', 'IMMUNE', 'RE_TX']].copy()
     
-    max_year = int((pd.to_datetime('2025-04-10') - cohort['transplant_date'].min()).days / 365.25)
+    max_year = int((pd.to_datetime(project_lists.STUDY_CUTOFF_DATE) - cohort['transplant_date'].min()).days / 365.25)
     years = list(range(1, max_year + 1))
+    
+    years_to_censor = (cohort['CENSOR_DATE'] - cohort['transplant_date']).dt.days / 365.25
+    
     missingness = pd.DataFrame(0,index=cohort.index, columns=years)
     lab_cols = ['ALT', 'ALP', 'AST', 'BMI', 'CREATININE', 'CYCLO', 'TAC']
     for col in lab_cols:
         for year in years:
             col_name = f'{col}_{year}'
+            # fill any value past years_to_censor with nan
+            cohort.loc[years_to_censor<year+0.25 ,col_name] = np.nan
             missingness[year] += (cohort[col_name].isnull()).astype(int)
     best_year = missingness.idxmin(axis=1)
+    
     selected_values = []
 
     varying_cols = lab_cols + ['DM', 'HTN', 'LIP', 'CV_HISTORY', 'ANTI_HTN', 'ANTI_PLATELET', 'STATIN', 'MONTHS_TO_EVENT']
@@ -455,14 +495,13 @@ def get_prediction_cohort(cohort):
         
     pred_cohort[varying_cols] = pd.DataFrame(selected_values, columns=varying_cols)
     pred_cohort['YRS_SINCE_TRANS'] = best_year
-    pred_cohort['CURR_AGE'] = pred_cohort['age_at_tx']+pred_cohort['YRS_SINCE_TRANS']
+    pred_cohort['CURR_AGE'] = pred_cohort['age_at_tx']+pred_cohort['YRS_SINCE_TRANS'] + 0.25
     
     pred_cohort['EVENT'] = pred_cohort['MONTHS_TO_EVENT'].notnull().astype(int)
-    # fill null MONTHS_TO_EVENT with end point - transplant date
-    # TODO: need proper censoring info
-    pred_cohort['MONTHS_TO_EVENT'] = (pred_cohort['MONTHS_TO_EVENT'].fillna((pd.to_datetime('2025-04-10') - pred_cohort['transplant_date']).dt.days / 30.4)).round()
-    
-    pred_cohort.drop(columns = 'transplant_date', inplace=True)
+    # fill null MONTHS_TO_EVENT with end point - anchor date (date of transplant + years since transplant)
+    pred_cohort['anchor_dates'] = pred_cohort.apply(lambda row: row['transplant_date'] + pd.DateOffset(years=row['YRS_SINCE_TRANS'],months=3), axis=1)
+    pred_cohort['MONTHS_TO_EVENT'] = (pred_cohort['MONTHS_TO_EVENT'].fillna((pred_cohort['CENSOR_DATE'] - pred_cohort['anchor_dates']).dt.days / 30.4)).round()
+    pred_cohort.drop(columns = ['transplant_date','CENSOR_DATE','anchor_dates'], inplace=True)
     
     pred_cohort.rename(columns={'age_at_tx':'AGE_AT_TX','person_id':'ID','sex':'SEX', 'CYCLO':'CYCLOSPORINE_TROUGH_LEVEL',
                                 'TAC':"TACROLIMUS_TROUGH_LEVEL",'CREATININE' : "SERUM_CREATININE"}, inplace=True)
@@ -471,7 +510,7 @@ def get_prediction_cohort(cohort):
     
     
 
-def main(pats_path, smoke_path, inds_path, dhd_path, events_path, labs_path, meds_path, outdir):
+def main(pats_path, smoke_path, inds_path, dhd_path, events_path, labs_path, meds_path, deaths_path, outdir):
     
     pats = pd.read_csv(pats_path)
     smoke = pd.read_csv(smoke_path)
@@ -480,13 +519,17 @@ def main(pats_path, smoke_path, inds_path, dhd_path, events_path, labs_path, med
     events = pd.read_csv(events_path)
     labs = pd.read_csv(labs_path)
     meds = pd.read_csv(meds_path)
+    deaths = pd.read_csv(deaths_path)
     
     # process the patients
     print("Processing patients...")
     cohort = process_pats(pats)
     
+    # add in death dates as censoring dates
+    print("Adding death dates...")
+    cohort = process_deaths(cohort, deaths)
+           
     # process the smoking history
-    # TODO: did they pull smoking
     print("Processing smoking history...")
     cohort = process_smoke(cohort, smoke)
     
@@ -538,8 +581,9 @@ if __name__ == '__main__':
     parser.add_argument('--events', type=str, required=True, help='Path to the CV_EVENTS_CTE table csv file')
     parser.add_argument('--labs', type=str, required=True, help='Path to the LABS_CTE table csv file')
     parser.add_argument('--meds', type=str, required=True, help='Path to the MEDS_CTE table csv file')
+    parser.add_argument('--deaths', type=str, required=True, help='Path to the DEATHS_CTE table csv file')
     parser.add_argument('--outdir', type=str, required=False, help='Output directory')
     
     args = parser.parse_args()
     
-    main(args.pats, args.smoke, args.inds, args.dhd, args.events, args.labs, args.meds, args.outdir)
+    main(args.pats, args.smoke, args.inds, args.dhd, args.events, args.labs, args.meds, args.deaths, args.outdir)
