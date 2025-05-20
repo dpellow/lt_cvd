@@ -260,6 +260,7 @@ def process_labs(cohort, labs):
             - person_id
             - measurement_date
             - test_name 
+            - test_code
             - test_value
             - test_unit
             
@@ -279,7 +280,7 @@ def process_labs(cohort, labs):
     new_cols_df = pd.DataFrame(np.nan,index=cohort.index, columns=[f'{lab}_{i}' for lab in lab_cols for i in range(1, max_years + 1)])
     cohort = pd.concat([cohort, new_cols_df], axis=1)
     for lab in lab_cols:
-        lab_subset = labs[labs['test_name'].isin(project_lists.LABS_DICT[lab])].copy()
+        lab_subset = labs[labs['test_code'].isin(project_lists.LABS_DICT[lab])].copy()
         for i in range(1, max_years + 1):
             col_name = f'{lab}_{i}'
 
