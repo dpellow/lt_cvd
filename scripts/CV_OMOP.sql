@@ -137,6 +137,7 @@ MEDS_CTE (
 SELECT 
     de.person_id,
     c.concept_name AS medication_name,
+    c.concept_code AS medication_code,
     de.drug_exposure_start_date AS start_date,
     de.drug_exposure_end_date AS end_date,
     de.quantity AS dosage
