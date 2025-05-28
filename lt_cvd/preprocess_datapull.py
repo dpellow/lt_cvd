@@ -327,6 +327,7 @@ def process_meds(cohort, meds):
             - start_date
             - end_date
             - medication_name
+            - medication_code
             - dosage
             
         new columns:
@@ -343,7 +344,7 @@ def process_meds(cohort, meds):
     max_years = int((pd.to_datetime(project_lists.STUDY_CUTOFF_DATE) - cohort['transplant_date'].min()).days / 365.25)
 
     for med in med_cols:
-        med_subset = meds[meds['medication_name'].isin(project_lists.MEDS_DICT[med])].copy()
+        med_subset = meds[meds['medication_code'].isin(project_lists.MEDS_DICT[med])].copy()
         # keep only the first medication per patient
         med_subset = med_subset.groupby('person_id').first().reset_index()
         cohort = cohort.merge(med_subset[['person_id', 'start_date']], on='person_id', how='left')
