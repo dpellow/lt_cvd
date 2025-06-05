@@ -127,16 +127,14 @@ def process_inds(cohort, inds):
     inds['FULM'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.FULM_CODES]) else 0)
     inds['IMMUNE'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.IMMUNE_CODES]) else 0)
     inds['RE_TX'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.RE_TX_CODES]) else 0)
-
-    # merge all the rows of each patient into a single row - drop diagnosis_date
-    inds = inds.groupby('person_id').agg({'METAB':'max', 'ALD':'max', 'CANCER':'max', 'HEP':'max', 'FULM':'max', 'IMMUNE':'max', 'RE_TX':'max', 'diagnosis_date':'min'}).reset_index()
     
-    # outer merge the cohort with indications on person_id
-    cohort = pd.merge(cohort, inds, on='person_id', how='inner')
-     
-    # keep only the rows with diagnosis date within 60 days before of transplant date
-    # TODO: probably don't need this
-    cohort = cohort.loc[(cohort['transplant_date'] - cohort['diagnosis_date']).dt.days <= 60]
+    cohort = pd.merge(cohort, inds, on='person_id', how='outer')
+    # TODO: Figure out best way to do this date filtering.
+    pre_tx_timedelta = (cohort['transplant_date'] - cohort['diagnosis_date']).dt.days
+    cohort = cohort.loc[((cohort['RE_TX']==1)&(pre_tx_timedelta>1))|
+                        ((pre_tx_timedelta <= 365)&(pre_tx_timedelta > 0))]
+    # merge all the rows of each patient into a single row
+    cohort = cohort.groupby('person_id').agg({'METAB':'max', 'ALD':'max', 'CANCER':'max', 'HEP':'max', 'FULM':'max', 'IMMUNE':'max', 'RE_TX':'max', 'diagnosis_date':'min'}).reset_index()
         
     cohort = cohort.drop(columns = ['diagnosis_date'])
     

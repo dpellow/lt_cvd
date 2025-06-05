@@ -1,4 +1,4 @@
-STUDY_CUTOFF_DATE = '2025-04-25'
+STUDY_CUTOFF_DATE = '2025-05-25'
 
 
 TRANS_KEYWORDS = ['orthotropic liver transplant', 'heterotropic liver transplant', 'liver transplant']
@@ -56,7 +56,7 @@ IMMUNE_DICT = {'K75.4' : [35208356],
 INV_IMMUNE = {y:x for x in IMMUNE_DICT.keys() for y in IMMUNE_DICT[x]}
 
 
-RE_TX_CODES = ["Z94.4", "T86.4"]
+RE_TX_CODES = ["Z94.4", "T86.4"] # <-- TODO: consider taking out Z94.4, "History of liver transplant"
 RE_TX_CONCEPT_CODES = [45561100,45551553,45594968,45609395,45590132,35225408]
 RE_TX_DICT = {'Z94.4' : [35225408],
               'T86.4' : [45561100,45551553,45594968,45609395,45590132]}
