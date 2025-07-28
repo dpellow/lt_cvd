@@ -100,7 +100,7 @@ def process_smoke(cohort, smoke):
     return cohort
     
     
-def process_inds(cohort, inds):
+def process_inds(cohort, inds, pats):
     ''' INDICATION_CTE table processing.
         columns:
             - person_id
@@ -126,17 +126,41 @@ def process_inds(cohort, inds):
     inds['HEP'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.HEP_CODES]) else 0)
     inds['FULM'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.FULM_CODES]) else 0)
     inds['IMMUNE'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.IMMUNE_CODES]) else 0)
-    inds['RE_TX'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.RE_TX_CODES]) else 0)
+    ## do RE_TX separately using the pats table !
+    ## inds['RE_TX'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.RE_TX_CODES]) else 0)
+    
+    ## C-S cohort has unexpectedly very high number of FULM - this is unlikely,
+    ## probably these were coded with K72.0 due to some difference in coding practice
+    ## Exclude any of these that are also one of the other conditions
+    inds['FULM'] = (inds['FULM'] & ~(inds['METAB'] | inds['ALD'] | inds['CANCER'] | inds['HEP'] | inds['IMMUNE'])).astype(int)
     
     cohort = pd.merge(cohort, inds, on='person_id', how='outer')
     # TODO: Figure out best way to do this date filtering.
     pre_tx_timedelta = (cohort['transplant_date'] - cohort['diagnosis_date']).dt.days
-    cohort = cohort.loc[((cohort['RE_TX']==1)&(pre_tx_timedelta>1))|
-                        ((pre_tx_timedelta <= 365)&(pre_tx_timedelta > 0))]
+    # cohort = cohort.loc[((cohort['RE_TX']==1)&(pre_tx_timedelta>1))|
+    #                     ((pre_tx_timedelta <= 365)&(pre_tx_timedelta >= 0))]
+    cohort = cohort.loc[(pre_tx_timedelta >= 0)]
     # merge all the rows of each patient into a single row
     cohort = cohort.groupby('person_id').agg({'METAB':'max', 'ALD':'max', 'CANCER':'max', 'HEP':'max', 'FULM':'max', 'IMMUNE':'max', 'RE_TX':'max', 'diagnosis_date':'min'}).reset_index()
         
     cohort = cohort.drop(columns = ['diagnosis_date'])
+    
+    pats['birth_date'] = pd.to_datetime(pats['birth_date'], format='mixed')
+    pats['transplant_date'] = pd.to_datetime(pats['transplant_date'], format='mixed')
+    # keep only the last transplant per patient
+    pats = pats.sort_values(['person_id','transplant_date'])
+    def had_prior_tx(subdf):
+        last_date = subdf['transplant_date'].iloc[-1].dt.normalize()
+        earlier_dates = subdf['date'].dt.normalize < last_date  # strictly earlier
+        return int(earlier_dates.any())
+
+    indicator = (
+        pats.groupby('person_id')
+        .apply(had_prior_tx)
+        .rename('RE_TX')
+    )
+    
+    cohort = cohort.merge(indicator, left_on='person_id', how='left', right_index=True)
     
     return cohort
 
@@ -229,6 +253,7 @@ def process_events(cohort, events):
     merged = match_chronic(merged,project_lists.ARYTHMIA_CHRONIC_CODES)
     merged = match_chronic(merged,project_lists.VALV_CHRONIC_CODES)
     merged = match_chronic(merged,project_lists.HEART_FAIL_CHRONIC_CODES)
+    merged = match_chronic(merged,project_lists.CEREBRO_CHRONIC_CODES)
 
 
     # Loop through each follow-up year
@@ -535,7 +560,7 @@ def main(pats_path, smoke_path, inds_path, dhd_path, events_path, labs_path, med
     
     # process the indications
     print("Processing indications...")
-    cohort = process_inds(cohort, inds)
+    cohort = process_inds(cohort, inds, pats)
     
     # process the diabetes, hypertension, dyslipidemia health statuses
     print("Processing diabetes, hypertension, dyslipidemia...")
