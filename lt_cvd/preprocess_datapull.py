@@ -85,6 +85,7 @@ def process_smoke(cohort, smoke):
     ''' SMOKING_CTE table processing.
         columns:
             - person_id
+            - smoking_code
             - smoking_status -> codes for current, former, never.
             - observation_date
         new columns:
@@ -94,7 +95,7 @@ def process_smoke(cohort, smoke):
     # smoke['code'] = smoke['smoking_status'].apply(lambda x: project_lists.SMOKER_INV[x] if x in project_lists.SMOKER_INV else np.nan)
     # smoker_ids = smoke.loc[(smoke['code'] in project_lists.SMOKER_CONCEPT_CODES), 'person_id'].values.tolist()
     print(smoke)
-    smoker_ids = smoke.loc[smoke['smoking_status'].isin(project_lists.SMOKER_CONCEPT_CODES), 'person_id'].values.tolist()
+    smoker_ids = smoke.loc[smoke['smoking_code'].isin(project_lists.SMOKER_CONCEPT_CODES), 'person_id'].values.tolist()
     cohort['SMOKER'] = cohort['person_id'].apply(lambda x: 1 if x in smoker_ids else 0)
     
     return cohort
