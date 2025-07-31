@@ -36,7 +36,7 @@ def process_pats(pats):
     pats = pats[pats['sex'].notna()]
     
     # drop pats with procedure_name not in list and print warning
-    nontx_pats = pats.loc[~(pats['procedure_name'].str.contains('liver transplant', case=False)), 'person_id'].values.tolist()
+    nontx_pats = pats.loc[~(pats['procedure_name'].str.contains('liver transplant|liver allotransplant', regex=True, case=False)), 'person_id'].values.tolist()
     if len(nontx_pats) > 0:
         print(f"Dropping {len(nontx_pats)} patients with non-transplant procedure names:")
         print(nontx_pats)
