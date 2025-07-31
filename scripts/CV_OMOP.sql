@@ -26,6 +26,7 @@ SMOKING_CTE AS (
     o.person_id,
     o.observation_date,
     c.concept_name AS smoking_status
+    c.concept_code AS smoking_code
 FROM 
     observation o
 INNER JOIN 
