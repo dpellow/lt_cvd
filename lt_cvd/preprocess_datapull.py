@@ -135,14 +135,16 @@ def process_inds(cohort, inds, pats):
     ## Exclude any of these that are also one of the other conditions
     inds['FULM'] = (inds['FULM'] & ~(inds['METAB'] | inds['ALD'] | inds['CANCER'] | inds['HEP'] | inds['IMMUNE'])).astype(int)
     
-    cohort = pd.merge(cohort, inds, on='person_id', how='outer')
-    # TODO: Figure out best way to do this date filtering.
-    pre_tx_timedelta = (cohort['transplant_date'] - cohort['diagnosis_date']).dt.days
-    # cohort = cohort.loc[((cohort['RE_TX']==1)&(pre_tx_timedelta>1))|
-    #                     ((pre_tx_timedelta <= 365)&(pre_tx_timedelta >= 0))]
-    cohort = cohort.loc[(pre_tx_timedelta >= 0)]
     # merge all the rows of each patient into a single row
-    cohort = cohort.groupby('person_id').agg({'METAB':'max', 'ALD':'max', 'CANCER':'max', 'HEP':'max', 'FULM':'max', 'IMMUNE':'max', 'RE_TX':'max', 'diagnosis_date':'min'}).reset_index()
+    inds = inds.groupby('person_id').agg({'METAB':'max', 'ALD':'max', 'CANCER':'max', 'HEP':'max', 'FULM':'max', 'IMMUNE':'max', 'diagnosis_date':'min'}).reset_index()
+    
+    
+    cohort = pd.merge(cohort, inds, on='person_id', how='left')
+    # TODO: Figure out best way to do this date filtering.
+    # pre_tx_timedelta = (cohort['transplant_date'] - cohort['diagnosis_date']).dt.days
+    # # cohort = cohort.loc[((cohort['RE_TX']==1)&(pre_tx_timedelta>1))|
+    # #                     ((pre_tx_timedelta <= 365)&(pre_tx_timedelta >= 0))]
+    # cohort = cohort.loc[(pre_tx_timedelta >= 0)]
         
     cohort = cohort.drop(columns = ['diagnosis_date'])
     
