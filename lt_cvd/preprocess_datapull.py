@@ -148,9 +148,8 @@ def process_inds(cohort, inds, pats):
         
     cohort = cohort.drop(columns = ['diagnosis_date'])
     
-    pats['birth_date'] = pd.to_datetime(pats['birth_date'], format='mixed')
     pats['transplant_date'] = pd.to_datetime(pats['transplant_date'], format='mixed')
-    # keep only the last transplant per patient
+
     pats = pats.sort_values(['person_id','transplant_date'])
     def had_prior_tx(subdf):
         last_date = subdf['transplant_date'].dt.normalize().iloc[-1]
