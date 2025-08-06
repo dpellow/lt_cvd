@@ -153,7 +153,7 @@ def process_inds(cohort, inds, pats):
     pats = pats.sort_values(['person_id','transplant_date'])
     def had_prior_tx(subdf):
         last_date = subdf['transplant_date'].dt.normalize().iloc[-1]
-        earlier_dates = subdf['transplant_date'].dt.normalize < last_date  # strictly earlier
+        earlier_dates = subdf['transplant_date'].dt.normalize() < last_date  # strictly earlier
         return int(earlier_dates.any())
 
     indicator = (
