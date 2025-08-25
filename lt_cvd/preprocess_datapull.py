@@ -220,6 +220,30 @@ def match_chronic(df,codes):
     result = pd.concat([non_match, first_match], ignore_index=True).sort_values(['person_id', 'diagnosis_date'])
     return result
 
+def group_events(df, gap=30):
+    df = df.sort_values(by = ['person_id','diagnosis_date']).reset_index(drop=True)
+    df_to_collapse = df[df["icd10_code"].isin(project_lists.CV_CODES)].copy()
+    df_other = df[~df["icd10_code"].isin(project_lists.CV_CODES)].copy()
+
+    # compute gap
+    df_to_collapse["prev_date"] = df_to_collapse.groupby(["person_id","icd10_code"])["diagnosis_date"].shift()
+    df_to_collapse["days_since_prev"] = (df_to_collapse["diagnosis_date"] - df_to_collapse["prev_date"]).dt.days
+
+    # new cluster whenever first event or gap exceeded
+    df_to_collapse["new_cluster"] = (df_to_collapse["days_since_prev"].isna()) | (df_to_collapse["days_since_prev"] > gap)
+
+    # cluster id
+    df_to_collapse["cluster_id"] = df_to_collapse.groupby(["person_id","icd10_code"])["new_cluster"].cumsum()
+
+    # now: keep *first event in each cluster* only
+    collapsed = df_to_collapse.groupby(["person_id","icd10_code","cluster_id"]).first().reset_index(drop=True)
+
+    # combine back with unaffected events
+    result = pd.concat([collapsed[["person_id","icd10_code","diagnosis_date"]], df_other], ignore_index=True)
+    result = result.sort_values(["person_id","diagnosis_date"]).reset_index(drop=True)
+    
+    return result
+
 
 def process_events(cohort, events):
     ''' CV_EVENTS_CTE table processing.
@@ -239,6 +263,9 @@ def process_events(cohort, events):
     events = events[events['icd10_code'].str.startswith(tuple(project_lists.CV_CODES))]
     events = events[events['person_id'].isin(cohort['person_id'])]
     
+    # try to group repeated event codes into a single event - window = 7 days
+    events = group_events(events, 7)
+    
     cohort = mark_condition(cohort, events, 'CV_HISTORY', project_lists.CV_CODES)
     
     # now we need to calculate the time to next event for each year
@@ -249,6 +276,7 @@ def process_events(cohort, events):
 
     # Sort for quick lookup
     merged = merged.sort_values(by=['person_id', 'diagnosis_date'])
+    
     
     # chronic events are counted as events only the first time    
     merged = match_chronic(merged,project_lists.CAD_CHRONIC_CODES) 

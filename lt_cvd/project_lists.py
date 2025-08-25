@@ -186,6 +186,9 @@ VALV_CODES = ['I34','I35','I36','I37']
 CEREBRO_CODES = ['G45.3', 'G45.9','I63','I69.3', 'I65','I66', 'I67.0']
 HF_CODES = ['I25.5','I50','I42']
 
+# these codes will be grouped into a single event if they occur within X days of each other
+GROUP_CV_CODES = ['I48.3', 'I48.4', 'I48.9', 'I47', 'I49', 'G45.3', 'G45.9','I63', 'I65','I66', 'I67.0'] 
+
 LABS_DICT = {
     'CREATININE': [3016723],
     'ALP': [3035995],
