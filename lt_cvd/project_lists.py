@@ -1,5 +1,5 @@
-STUDY_CUTOFF_DATE = '2025-05-25'
-
+STUDY_CUTOFF_DATE = '2025-08-25'
+CV_EVENT_GAP_DAYS = 180 # play with this, including -> inf
 
 TRANS_KEYWORDS = ['orthotropic liver transplant', 'heterotropic liver transplant', 'liver transplant']
 TRANS_CONCEPT_LIST = [467458,2100972, 4067459]
@@ -178,9 +178,11 @@ ARYTHMIA_CHRONIC_CODES = ['I48.0', 'I48.1', 'I48.2','I48.91']
 HEART_FAIL_CHRONIC_CODES = ['I25.5','I50','I42']
 VALV_CHRONIC_CODES = ['I34','I35','I36','I37']
 CEREBRO_CHRONIC_CODES = ['I69.3']
+ACS_CHRONIC_CODES = ['I25.2'] # make old MI chronic for now - consider taking out
 
 ARYTHMIA_CODES = ['I48.0', 'I48.1', 'I48.2', 'I48.3', 'I48.4', 'I48.9', 'I47', 'I49']
-ACS_CODES = ['I21','I22', 'I25.2', 'I46']
+              # consider exlcuding I49.9: 'I49.0', 'I49.1', 'I49.2', 'I49.3', 'I49.4', 'I49.5', 'I49.8']
+ACS_CODES = ['I21','I22', 'I25.2', 'I46'] # consider just taking out old MI I25.2
 CAD_CODES = ['I25.1','I25.4','I25.6','I25.7','I25.8','I25.9']
 VALV_CODES = ['I34','I35','I36','I37']
 CEREBRO_CODES = ['G45.3', 'G45.9','I63','I69.3', 'I65','I66', 'I67.0']

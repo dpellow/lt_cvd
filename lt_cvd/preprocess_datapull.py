@@ -264,7 +264,7 @@ def process_events(cohort, events):
     events = events[events['person_id'].isin(cohort['person_id'])]
     
     # try to group repeated event codes into a single event - window = 7 days
-    events = group_events(events, 7)
+    events = group_events(events, project_lists.CV_EVENT_GAP_DAYS)
     
     cohort = mark_condition(cohort, events, 'CV_HISTORY', project_lists.CV_CODES)
     
@@ -284,6 +284,7 @@ def process_events(cohort, events):
     merged = match_chronic(merged,project_lists.VALV_CHRONIC_CODES)
     merged = match_chronic(merged,project_lists.HEART_FAIL_CHRONIC_CODES)
     merged = match_chronic(merged,project_lists.CEREBRO_CHRONIC_CODES)
+    merged = match_chronic(merged,project_lists.ACS_CHRONIC_CODES)
 
 
     # Loop through each follow-up year
