@@ -10,7 +10,7 @@
 
 
 ### Getting started
-Clone the repo and set up your python environment. The [scikit-survival](https://scikit-survival.readthedocs.io/en/stable/install.html), [shap](https://shap.readthedocs.io/en/latest/#install), [sklearn](https://scikit-learn.org/stable/install.html), and [matplotlib](https://matplotlib.org/stable/install/index.html) packages are required.
+Clone the repo and set up your python environment. The [scikit-survival](https://scikit-survival.readthedocs.io/en/stable/install.html), [lifelines](https://lifelines.readthedocs.io/en/latest/), and [sklearn](https://scikit-learn.org/stable/install.html) packages are required.
 
 ### Running the code
 Run the `run_model.py` script that is in the `lt_cvd` directory:

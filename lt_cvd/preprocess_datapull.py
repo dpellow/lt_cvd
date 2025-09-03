@@ -20,6 +20,8 @@ def process_pats(pats):
         new colums:
             - age_at_trans -> calculate from birth_date and transplant_date
     '''
+    print("Processing patient cohort")
+    
     pats['birth_date'] = pd.to_datetime(pats['birth_date'], format='mixed')
     pats['transplant_date'] = pd.to_datetime(pats['transplant_date'], format='mixed')
     
@@ -51,6 +53,8 @@ def process_pats(pats):
         print(f"Dropping {len(pats[pats['age_at_tx'] < 18])} patients < 18 at transplant:")
     pats = pats[pats['age_at_tx'] >= 18]
     
+    print("Cohort size:", len(pats))
+    
     return pats
 
 
@@ -63,6 +67,8 @@ def process_deaths(cohort, deaths):
             - CENSOR_DATE -> date of death or study end date for those with no death date
             
     '''
+    
+    print("Processing death and censoring dates...")
     deaths['death_date'] = pd.to_datetime(deaths['death_date'], format='mixed')
     # merge with cohort on person_id
     cohort = pd.merge(cohort, deaths[['person_id', 'death_date']], on='person_id', how='left')
@@ -79,6 +85,8 @@ def process_deaths(cohort, deaths):
 
     cohort = cohort[cohort['CENSOR_DATE'] >= (cohort['transplant_date'] + pd.DateOffset(years=1, months=3))]
 
+    print("Cohort size:", len(cohort))
+
     return cohort
 
 def process_smoke(cohort, smoke):
@@ -94,7 +102,7 @@ def process_smoke(cohort, smoke):
     
     # smoke['code'] = smoke['smoking_status'].apply(lambda x: project_lists.SMOKER_INV[x] if x in project_lists.SMOKER_INV else np.nan)
     # smoker_ids = smoke.loc[(smoke['code'] in project_lists.SMOKER_CONCEPT_CODES), 'person_id'].values.tolist()
-    print(smoke)
+    
     smoker_ids = smoke.loc[smoke['smoking_code'].isin(project_lists.SMOKER_CONCEPT_CODES), 'person_id'].values.tolist()
     cohort['SMOKER'] = cohort['person_id'].apply(lambda x: 1 if x in smoker_ids else 0)
     
@@ -607,6 +615,7 @@ def main(pats_path, smoke_path, inds_path, dhd_path, events_path, labs_path, med
     cohort = process_meds(cohort, meds)
     
     # add to diabetes etc based on the meds and labs
+    print("Updating diseases based on labs and meds...")
     cohort = add_dhd(cohort, labs)
     
     # stats on the cohort

@@ -8,9 +8,11 @@ import numpy as np
 
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv 
-from sksurv.metrics import concordance_index_censored, brier_score
+from sksurv.metrics import concordance_index_censored, brier_score, cumulative_dynamic_auc
 
 from matplotlib import pyplot as plt
+
+from lifelines import KaplanMeierFitter
 
 import warnings
 
@@ -121,6 +123,43 @@ def run_predictions(df, rsf):
     preds = pd.DataFrame(ten_yr_risk, columns=['10 year risk'],index=df['ID'])
     return preds
 
+def make_structured_array(event, time):
+    return np.array([(bool(e), t) for e, t in zip(event, time)],
+                    dtype=[('event', 'bool'), ('time', 'f8')])
+    
+def compute_binwise_km_calibration(data, preds, t_eval=120):
+    bins = [0.0, 0.075, 0.20, 1.0]
+    labels = ['<7.5%', '7.5-20%', '>20%']
+    data = data.copy()
+    data['predicted_event_prob'] = preds
+    data['bin'] = pd.cut(preds, bins=bins, labels=labels, include_lowest=True)
+    results = []
+    for label in labels:
+        bin_df = data[data['bin'] == label]
+
+        surv_data = make_structured_array(bin_df['EVENT'], bin_df['MONTHS_TO_EVENT'])
+        
+        kmf = KaplanMeierFitter()
+        kmf.fit(surv_data['time'], event_observed=surv_data['event'])
+        km_surv = kmf.survival_function_at_times(t_eval).values[0]
+        km_event_rate = 1 - km_surv
+        
+        pred_mean = bin_df['predicted_event_prob'].mean()
+        abs_error = abs(pred_mean - km_event_rate)
+
+        results.append({
+            'bin': label,
+            'n': len(bin_df),
+            'mean_pred': pred_mean,
+            'km_event_rate': km_event_rate,
+            'abs_error': abs_error
+        })
+    results = pd.DataFrame(results)
+    weights = results['n'] / results['n'].sum()
+    weighted_avg = (results['abs_error'] * weights).sum()
+    print(results)
+    return weighted_avg, results
+
 
 def run_evaluations(preds, df, training_brier_distr):
     print("Evaluating predictions")
@@ -128,17 +167,24 @@ def run_evaluations(preds, df, training_brier_distr):
     y = Surv.from_arrays(training_brier_distr['EVENT'], training_brier_distr['MONTHS_TO_EVENT'])
     c_ind = concordance_index_censored(df['EVENT'].astype(bool), df['MONTHS_TO_EVENT'], preds['10 year risk'])[0]
     _, brier = brier_score(y, yt, 1-preds['10 year risk'], 120)
+    auc, _ = cumulative_dynamic_auc(y, yt, preds['10 year risk'], [120])
+    avg_calib, binned_results = compute_binwise_km_calibration(df, preds['10 year risk'], t_eval=120)
     print(f"Concordance index: {c_ind.round(3)}")
     print(f"Brier score: {brier.round(3)}")
-    return c_ind.round(4), brier.round(4)
+    print(f"CD-AUC: {auc[0].round(3)}")
+    print("Average absolute calibration error (binwise KM): ", avg_calib.round(4))
+    return c_ind.round(4), brier.round(4), auc[0].round(4), avg_calib.round(4), binned_results
 
 
-def save_results(preds, c_ind, brier, outdir):
+def save_results(preds, c_ind, brier, cd_auc, wm_sae, binned_results, outdir):
     print("Saving results")
     preds.to_csv(os.path.join(outdir, 'predictions.csv'))
+    binned_results.to_csv(os.path.join(outdir, 'binned_calibration.csv'))
     with open(os.path.join(outdir, 'metrics.txt'), 'w') as f:
         f.write(f"Concordance index: {c_ind}\n")
         f.write(f"Brier score: {brier}\n")
+        f.write(f"CD-AUC: {cd_auc}\n")
+        f.write(f"wm-SAE: {wm_sae}\n")
     print("Results saved")
 
 
@@ -203,11 +249,11 @@ def main(model_path, cohort_path, outdir):
     
     preds = run_predictions(df,rsf)
     
-    c_ind, brier = run_evaluations(preds, df, training_distr)
+    c_ind, brier, cd_auc, wm_sae, binned_results   = run_evaluations(preds, df, training_distr)
     
-    save_results(preds, c_ind, brier, outdir)
+    save_results(preds, c_ind, brier, cd_auc, wm_sae, binned_results, outdir)
     
-    plot_calibration(preds, df, outdir)
+    # plot_calibration(preds, df, outdir)
     
     return preds, c_ind, brier
     
