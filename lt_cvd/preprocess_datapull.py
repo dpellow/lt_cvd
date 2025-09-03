@@ -42,7 +42,7 @@ def process_pats(pats):
     if len(nontx_pats) > 0:
         print(f"Dropping {len(nontx_pats)} patients with non-transplant procedure names:")
         print(nontx_pats)
-    pats = pats[pats['procedure_name'].str.contains('liver transplant', case=False)]
+    pats = pats[pats['procedure_name'].str.contains('liver transplant|liver allotransplant', regex=True, case=False)]
     pats = pats.drop(columns=['procedure_name'])
     
     pats['age_at_tx'] = ((pats['transplant_date'] - pats['birth_date']).dt.days / 365.25).round(2)
@@ -230,9 +230,7 @@ def match_chronic(df,codes):
 
 def group_events(df, gap=30):
     df = df.sort_values(by = ['person_id','diagnosis_date']).reset_index(drop=True)
-    df_to_collapse = df[df["icd10_code"].isin(project_lists.CV_CODES)].copy()
-    df_other = df[~df["icd10_code"].isin(project_lists.CV_CODES)].copy()
-
+    df_to_collapse = df.copy()
     # compute gap
     df_to_collapse["prev_date"] = df_to_collapse.groupby(["person_id","icd10_code"])["diagnosis_date"].shift()
     df_to_collapse["days_since_prev"] = (df_to_collapse["diagnosis_date"] - df_to_collapse["prev_date"]).dt.days
@@ -244,11 +242,8 @@ def group_events(df, gap=30):
     df_to_collapse["cluster_id"] = df_to_collapse.groupby(["person_id","icd10_code"])["new_cluster"].cumsum()
 
     # now: keep *first event in each cluster* only
-    collapsed = df_to_collapse.groupby(["person_id","icd10_code","cluster_id"]).first().reset_index(drop=True)
-
-    # combine back with unaffected events
-    result = pd.concat([collapsed[["person_id","icd10_code","diagnosis_date"]], df_other], ignore_index=True)
-    result = result.sort_values(["person_id","diagnosis_date"]).reset_index(drop=True)
+    collapsed = df_to_collapse.groupby(["person_id","icd10_code","cluster_id"]).first().reset_index()
+    result = collapsed.sort_values(["person_id","diagnosis_date"]).reset_index(drop=True)
     
     return result
 

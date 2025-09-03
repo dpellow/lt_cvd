@@ -180,8 +180,7 @@ VALV_CHRONIC_CODES = ['I34','I35','I36','I37']
 CEREBRO_CHRONIC_CODES = ['I69.3']
 ACS_CHRONIC_CODES = ['I25.2'] # make old MI chronic for now - consider taking out
 
-ARYTHMIA_CODES = ['I48.0', 'I48.1', 'I48.2', 'I48.3', 'I48.4', 'I48.9', 'I47', 'I49']
-              # consider exlcuding I49.9: 'I49.0', 'I49.1', 'I49.2', 'I49.3', 'I49.4', 'I49.5', 'I49.8']
+ARYTHMIA_CODES = ['I48.0', 'I48.1', 'I48.2', 'I48.3', 'I48.4', 'I48.9', 'I47','I49.0', 'I49.1', 'I49.2', 'I49.3', 'I49.4', 'I49.5', 'I49.8']
 ACS_CODES = ['I21','I22', 'I25.2', 'I46'] # consider just taking out old MI I25.2
 CAD_CODES = ['I25.1','I25.4','I25.6','I25.7','I25.8','I25.9']
 VALV_CODES = ['I34','I35','I36','I37']
