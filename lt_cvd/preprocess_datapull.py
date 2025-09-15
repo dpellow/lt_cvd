@@ -488,7 +488,20 @@ def get_cohort_info(cohort, processed_events, outdir):
                                      'Median':median,
                                      'Lower':lower_q, 'Upper':upper_q}
     processed_events = processed_events[processed_events['diagnosis_date'] >= (processed_events['transplant_date'] + pd.DateOffset(months=15))]
-    demo_dict['CV_EVENTS']['Total'] = {'N':len(processed_events),}   
+    
+    # times between events for the same patient
+    times_df = processed_events[['person_id','diagnosis_date']].copy()
+    times_df = times_df.sort_values(by=['person_id','diagnosis_date']).reset_index(drop=True)
+    times_df["prev_date"] = times_df.groupby(["person_id"])["diagnosis_date"].shift()
+    times_df["months_since_prev"] = ((times_df["diagnosis_date"] - times_df["prev_date"]).dt.days / 30.4)
+    times_df = times_df.dropna()
+    median = times_df['months_since_prev'].median()
+    lower_q = times_df['months_since_prev'].quantile(0.25)
+    upper_q = times_df['months_since_prev'].quantile(0.75)
+    
+    demo_dict['CV_EVENTS']['Total'] = {'N':len(processed_events),
+                                       'Median':median,
+                                       'Lower':lower_q, 'Upper':upper_q} 
     demo_dict['CV_EVENTS']['Total']['Arrhythmia'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.ARYTHMIA_CODES)).sum().sum()
     demo_dict['CV_EVENTS']['Total']['Valvular'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.VALV_CODES)).sum().sum()
     demo_dict['CV_EVENTS']['Total']['ACS'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.ACS_CODES)).sum().sum()

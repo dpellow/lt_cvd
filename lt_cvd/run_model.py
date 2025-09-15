@@ -131,8 +131,17 @@ def compute_binwise_km_calibration(data, preds, t_eval=120):
     bins = [0.0, 0.075, 0.20, 1.0]
     labels = ['<7.5%', '7.5-20%', '>20%']
     data = data.copy()
-    data['predicted_event_prob'] = preds
-    data['bin'] = pd.cut(preds, bins=bins, labels=labels, include_lowest=True)
+    # data['predicted_event_prob'] = preds["10 year risk"]
+    data = pd.merge(data, preds, on="ID", how="left")  ## updated 2025-09-12
+    data = data.rename(columns={ 
+        "10 year risk": "predicted_event_prob"
+    })
+    # data['bin'] = pd.cut(preds["10 year risk"], bins=bins, labels=labels, include_lowest=True)
+    bin_data = pd.cut(preds.squeeze(), bins=bins, labels=labels, include_lowest=True) ## updated 2025-09-12
+    data = pd.merge(data, bin_data, on="ID", how="left")  ## updated 2025-09-12
+    data = data.rename(columns={
+        "10 year risk": "bin"
+    })
     results = []
     for label in labels:
         bin_df = data[data['bin'] == label]
