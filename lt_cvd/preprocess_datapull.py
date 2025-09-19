@@ -137,15 +137,16 @@ def process_inds(cohort, inds, pats):
     inds['IMMUNE'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.IMMUNE_CODES]) else 0)
     ## do RE_TX separately using the pats table !
     ## inds['RE_TX'] = inds['icd10_code'].apply(lambda x: 1 if any([x.startswith(c) for c in project_lists.RE_TX_CODES]) else 0)
+
+    # merge all the rows of each patient into a single row
+    inds = inds.groupby('person_id').agg({'METAB':'max', 'ALD':'max', 'CANCER':'max', 'HEP':'max', 'FULM':'max', 'IMMUNE':'max', 'diagnosis_date':'min'}).reset_index()
+
     
     ## C-S cohort has unexpectedly very high number of FULM - this is unlikely,
     ## probably these were coded with K72.0 due to some difference in coding practice
     ## Exclude any of these that are also one of the other conditions
     inds['FULM'] = (inds['FULM'] & ~(inds['METAB'] | inds['ALD'] | inds['CANCER'] | inds['HEP'] | inds['IMMUNE'])).astype(int)
-    
-    # merge all the rows of each patient into a single row
-    inds = inds.groupby('person_id').agg({'METAB':'max', 'ALD':'max', 'CANCER':'max', 'HEP':'max', 'FULM':'max', 'IMMUNE':'max', 'diagnosis_date':'min'}).reset_index()
-    
+        
     
     cohort = pd.merge(cohort, inds, on='person_id', how='left')
     # TODO: Figure out best way to do this date filtering.
