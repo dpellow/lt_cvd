@@ -501,7 +501,7 @@ def get_cohort_info(cohort, processed_events, outdir):
     lower_q = times_df['months_since_prev'].quantile(0.25)
     upper_q = times_df['months_since_prev'].quantile(0.75)
     
-    demo_dict['CV_EVENTS']['Total'] = {'N':len(processed_events),
+    demo_dict['CV_EVENTS']['Total'] = {'N':len(times_df),
                                        'Median':median,
                                        'Lower':lower_q, 'Upper':upper_q} 
     demo_dict['CV_EVENTS']['Total']['Arrhythmia'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.ARYTHMIA_CODES)).sum().sum()
