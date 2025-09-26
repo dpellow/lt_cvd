@@ -568,8 +568,8 @@ def get_prediction_cohort(cohort):
         selected_values.append(patient_values)
         
     pred_cohort[varying_cols] = pd.DataFrame(selected_values, columns=varying_cols)
-    pred_cohort['YRS_SINCE_TRANS'] = best_year
-    pred_cohort['CURR_AGE'] = pred_cohort['age_at_tx']+pred_cohort['YRS_SINCE_TRANS'] + 0.25
+    pred_cohort['YRS_SINCE_TRANS'] = best_year + 0.25
+    pred_cohort['CURR_AGE'] = pred_cohort['age_at_tx']+pred_cohort['YRS_SINCE_TRANS']
     
     pred_cohort['EVENT'] = pred_cohort['MONTHS_TO_EVENT'].notnull().astype(int)
     # fill null MONTHS_TO_EVENT with end point - anchor date (date of transplant + years since transplant)
