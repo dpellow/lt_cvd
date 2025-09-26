@@ -573,7 +573,8 @@ def get_prediction_cohort(cohort):
     
     pred_cohort['EVENT'] = pred_cohort['MONTHS_TO_EVENT'].notnull().astype(int)
     # fill null MONTHS_TO_EVENT with end point - anchor date (date of transplant + years since transplant)
-    pred_cohort['anchor_dates'] = pred_cohort.apply(lambda row: row['transplant_date'] + pd.DateOffset(years=row['YRS_SINCE_TRANS'],months=3), axis=1)
+    pred_cohort['anchor_dates'] = pred_cohort['transplant_date'] + pd.to_timedelta(
+                                        (pred_cohort['YRS_SINCE_TRANS'] * 365.25).round().astype(int), unit="D") #pred_cohort.apply(lambda row: row['transplant_date'] + pd.DateOffset(days = int(row['YRS_SINCE_TRANS']*365.25)), axis=1)
     pred_cohort['MONTHS_TO_EVENT'] = (pred_cohort['MONTHS_TO_EVENT'].fillna((pred_cohort['CENSOR_DATE'] - pred_cohort['anchor_dates']).dt.days / 30.4)).round()
     pred_cohort.drop(columns = ['transplant_date','CENSOR_DATE','anchor_dates'], inplace=True)
     
