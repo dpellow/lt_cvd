@@ -492,6 +492,7 @@ def get_cohort_info(cohort, processed_events, outdir):
     
     # times between events for the same patient
     times_df = processed_events[['person_id','diagnosis_date']].copy()
+    times_df = times_df.drop_duplicates()
     times_df = times_df.sort_values(by=['person_id','diagnosis_date']).reset_index(drop=True)
     times_df["prev_date"] = times_df.groupby(["person_id"])["diagnosis_date"].shift()
     times_df["months_since_prev"] = ((times_df["diagnosis_date"] - times_df["prev_date"]).dt.days / 30.4)
