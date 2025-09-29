@@ -499,12 +499,12 @@ def get_cohort_info(cohort, processed_events, outdir):
     demo_dict['CV_EVENTS']['Total'] = {'N':len(times_df),
                                        'Median':median,
                                        'Lower':lower_q, 'Upper':upper_q}   
-    demo_dict['CV_EVENTS']['Total']['Arrhythmia'] = processed_events['icd10_code'].str.startswith(tuple(ARYTHMIA_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['Valvular'] = processed_events['icd10_code'].str.startswith(tuple(VALV_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['ACS'] = processed_events['icd10_code'].str.startswith(tuple(ACS_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['CAD'] = processed_events['icd10_code'].str.startswith(tuple(CAD_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['Cerebrovascular'] = processed_events['icd10_code'].str.startswith(tuple(CEREBRO_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['Heart failure'] = processed_events['icd10_code'].str.startswith(tuple(HF_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['Arrhythmia'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.ARYTHMIA_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['Valvular'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.VALV_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['ACS'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.ACS_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['CAD'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.CAD_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['Cerebrovascular'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.CEREBRO_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['Heart failure'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.HF_CODES)).sum().sum()
     
     print(demo_dict)
     
