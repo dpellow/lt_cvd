@@ -476,11 +476,7 @@ def get_cohort_info(cohort, processed_events, outdir):
     
     # number of first events for a patient, median, upper, and lower MONTHS_TO_EVENT - for first event
     # number of rows with a non-null value in one of the MONTHS_TO_EVENT columns
-    event_cols = [f'MONTHS_TO_EVENT_{i}' for i in range(1, max_years + 1)]
-    events_df = cohort[event_cols]
-    
-    first_event_times = events_df.apply(lambda row: row[row.notna()].iloc[0] if row.notna().any() else np.nan, axis=1)
-    first_event_times = first_event_times.dropna()
+    first_event_times = cohort['MONTHS_TO_EVENT_1'].dropna()
     median = first_event_times.median()
     lower_q = first_event_times.quantile(0.25)
     upper_q = first_event_times.quantile(0.75)
@@ -491,25 +487,24 @@ def get_cohort_info(cohort, processed_events, outdir):
     processed_events = processed_events[processed_events['diagnosis_date'] >= (processed_events['transplant_date'] + pd.DateOffset(months=15))]
     
     # times between events for the same patient
-    times_df = processed_events[['person_id','diagnosis_date']].copy()
-    times_df = times_df.drop_duplicates()
+    times_df = processed_events[['person_id','diagnosis_date','transplant_date']].copy()
+    times_df = times_df.drop_duplicates(subset=['person_id','diagnosis_date'])
     times_df = times_df.sort_values(by=['person_id','diagnosis_date']).reset_index(drop=True)
-    times_df["prev_date"] = times_df.groupby(["person_id"])["diagnosis_date"].shift()
-    times_df["months_since_prev"] = ((times_df["diagnosis_date"] - times_df["prev_date"]).dt.days / 30.4)
-    times_df = times_df.dropna()
+    times_df["months_since_prev"] = times_df.groupby("person_id")["diagnosis_date"].diff().dt.days / 30.4
+    times_df["months_since_prev"] = times_df["months_since_prev"].fillna((((times_df["diagnosis_date"] - (times_df["transplant_date"])).dt.days) / 30.4)-15)
     median = times_df['months_since_prev'].median()
     lower_q = times_df['months_since_prev'].quantile(0.25)
     upper_q = times_df['months_since_prev'].quantile(0.75)
     
     demo_dict['CV_EVENTS']['Total'] = {'N':len(times_df),
                                        'Median':median,
-                                       'Lower':lower_q, 'Upper':upper_q} 
-    demo_dict['CV_EVENTS']['Total']['Arrhythmia'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.ARYTHMIA_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['Valvular'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.VALV_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['ACS'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.ACS_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['CAD'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.CAD_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['Cerebrovascular'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.CEREBRO_CODES)).sum().sum()
-    demo_dict['CV_EVENTS']['Total']['Heart failure'] = processed_events['icd10_code'].str.startswith(tuple(project_lists.HF_CODES)).sum().sum()
+                                       'Lower':lower_q, 'Upper':upper_q}   
+    demo_dict['CV_EVENTS']['Total']['Arrhythmia'] = processed_events['icd10_code'].str.startswith(tuple(ARYTHMIA_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['Valvular'] = processed_events['icd10_code'].str.startswith(tuple(VALV_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['ACS'] = processed_events['icd10_code'].str.startswith(tuple(ACS_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['CAD'] = processed_events['icd10_code'].str.startswith(tuple(CAD_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['Cerebrovascular'] = processed_events['icd10_code'].str.startswith(tuple(CEREBRO_CODES)).sum().sum()
+    demo_dict['CV_EVENTS']['Total']['Heart failure'] = processed_events['icd10_code'].str.startswith(tuple(HF_CODES)).sum().sum()
     
     print(demo_dict)
     
