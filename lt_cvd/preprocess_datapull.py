@@ -366,11 +366,11 @@ def process_labs(cohort, labs):
         tac_values = [row[col] for col in tac_cols]
         cyclo_values = [row[col] for col in cyclo_cols]
         
-        if any(tac_values):
+        if any([(x > 0)for x in tac_values]):
             # set all cyclo values to 0
             for col in cyclo_cols:
                 cohort.at[idx, col] = 0
-        elif not any(tac_values) and any(cyclo_values):
+        elif not any([(x > 0) for x in tac_values]) and any([(x > 0)for x in cyclo_values]):
             # set all tac values to 0
             for col in tac_cols:
                 cohort.at[idx, col] = 0
