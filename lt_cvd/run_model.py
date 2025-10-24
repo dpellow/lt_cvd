@@ -14,6 +14,8 @@ from matplotlib import pyplot as plt
 
 from lifelines import KaplanMeierFitter
 
+import shap
+
 import warnings
 
 # Suppress specific UserWarning from sklearn.utils.validation
@@ -30,10 +32,14 @@ def load_model(model_path):
     with open(bins_file, 'rb') as f:
         bins = pickle.load(f)
     
+    explainer_file = os.path.join(model_path, 'explainer.pkl') 
+    with open(explainer_file, "rb") as f:
+        explainer = pickle.load(f)
+    
     # needed to compute brier score
     training_distr = pd.read_csv(os.path.join(model_path, 'training_distr.csv'), index_col=0)
         
-    return model, bins, training_distr
+    return model, bins, training_distr, explainer
 
 def preprocess(df):
     # add any columns that are missing (they will be imputed as missing values - warn)
@@ -249,14 +255,43 @@ def plot_calibration(preds, df, outdir):
     plt.savefig(os.path.join(outdir,'calibration.png'))
 
 
+class RSFPredictWrapper:
+    """Callable wrapper around an RSF model to make it picklable."""
+    def __init__(self, rsf, t_eval):
+        self.rsf = rsf
+        self.t_eval = t_eval
+
+    def __call__(self, X):
+        surv_fns = self.rsf.predict_survival_function(X)
+        risk_scores = np.array([1 - fn(self.t_eval[0]) for fn in surv_fns])
+        return risk_scores
+
+def run_shap(df, explainer, outdir):
+    X_test = df.drop(columns=['ID','EVENT','MONTHS_TO_EVENT'])
+    print("Running SHAP analysis")
+    shap_values = explainer(X_test)
+    
+    shap.summary_plot(shap_values, X_test, feature_names=X_test.columns, show=False,
+                      max_display=15, plot_size=[12,10])
+    plt.tight_layout()
+    plt.xticks(fontsize=14)
+    plt.savefig(os.path.join(outdir, 'shap_summary_plot.png'),dpi=400)
+    plt.close()
+    
+    return shap_values
+
+
+
 def main(model_path, cohort_path, outdir):
     
     # load the model (and binning info)
-    rsf, bins, training_distr = load_model(model_path)
+    rsf, bins, training_distr, explainer = load_model(model_path)
     
     df = get_subjects(cohort_path,bins)
     
     preds = run_predictions(df,rsf)
+    
+    shap = run_shap(df,explainer, outdir)
     
     c_ind, brier, cd_auc, wm_sae, binned_results   = run_evaluations(preds, df, training_distr)
     

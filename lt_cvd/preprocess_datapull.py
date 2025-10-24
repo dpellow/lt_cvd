@@ -577,7 +577,69 @@ def get_prediction_cohort(cohort):
                                 'TAC':"TACROLIMUS_TROUGH_LEVEL",'CREATININE' : "SERUM_CREATININE"}, inplace=True)
     
     return pred_cohort
+
+def get_prediction_cohort_random(cohort):
+    '''
+        For each patient, take the follow up year with the least missingness.
+        If there is a tie, take the earlier one.
+        Set up the censoring dates
+    '''
+    pred_cohort = cohort[['person_id', 'transplant_date', 'CENSOR_DATE', 'sex', 'age_at_tx', 'SMOKER', 'METAB', 'ALD', \
+                          'CANCER', 'HEP', 'FULM', 'IMMUNE', 'RE_TX']].copy()
     
+    max_year = int((pd.to_datetime(project_lists.STUDY_CUTOFF_DATE) - cohort['transplant_date'].min()).days / 365.25)
+    years = list(range(1, max_year + 1))
+    
+    years_to_censor = (cohort['CENSOR_DATE'] - cohort['transplant_date']).dt.days / 365.25
+    
+    lab_cols = ['ALT', 'ALP', 'AST', 'BMI', 'CREATININE', 'CYCLO', 'TAC']
+    for col in lab_cols:
+        for year in years:
+            col_name = f'{col}_{year}'
+            # fill any value past years_to_censor with nan
+            cohort.loc[years_to_censor<year+0.25 ,col_name] = np.nan
+    varying_cols = lab_cols + ['DM', 'HTN', 'LIP', 'CV_HISTORY', 'ANTI_HTN', 'ANTI_PLATELET', 'STATIN', 'MONTHS_TO_EVENT']
+    random_years=[]
+    for idx, censor_time in cohort['years_to_censor'].items():
+        # eligible years = those that are before censor time
+        eligible_years = [y for y in years if censor_time >= y=0.25]
+        if len(eligible_years) == 0:
+            random_years.append(np.nan)
+        else:
+            random_years.append(np.random.choice(eligible_years))   
+    random_years = pd.Series(random_years, index=cohort.index, name="random_year")
+    orig_len = pred_cohort.shape[0]
+    pred_cohort = pred_cohort[~random_years.isna()]
+    filtered_len = pred_cohort.shape[0] 
+    random_years = random_years.dropna()
+    print(f'Dropped {orig_len - filtered_len} patients with no eligible follow-up year for random selection.')
+    selected_values = []
+    for idx, year in random_years.items():
+        patient_values = []
+        if pd.isna(year):
+            patient_values = [np.nan] * len(varying_cols)
+        else:
+            for c in varying_cols:
+                col_name = f'{c}_{int(year)}'
+                val = cohort.at[idx, col_name] if col_name in cohort.columns else np.nan
+                patient_values.append(val)
+        selected_values.append(patient_values)
+
+    pred_cohort[varying_cols] = pd.DataFrame(selected_values, columns=varying_cols)
+    pred_cohort['YRS_SINCE_TRANS'] = random_years + 0.25
+    pred_cohort['CURR_AGE'] = pred_cohort['age_at_tx']+pred_cohort['YRS_SINCE_TRANS']
+    
+    pred_cohort['EVENT'] = pred_cohort['MONTHS_TO_EVENT'].notnull().astype(int)
+    # fill null MONTHS_TO_EVENT with end point - anchor date (date of transplant + years since transplant)
+    pred_cohort['anchor_dates'] = pred_cohort['transplant_date'] + pd.to_timedelta(
+                                        (pred_cohort['YRS_SINCE_TRANS'] * 365.25).round().astype(int), unit="D") #pred_cohort.apply(lambda row: row['transplant_date'] + pd.DateOffset(days = int(row['YRS_SINCE_TRANS']*365.25)), axis=1)
+    pred_cohort['MONTHS_TO_EVENT'] = (pred_cohort['MONTHS_TO_EVENT'].fillna((pred_cohort['CENSOR_DATE'] - pred_cohort['anchor_dates']).dt.days / 30.4)).round()
+    pred_cohort.drop(columns = ['transplant_date','CENSOR_DATE','anchor_dates'], inplace=True)
+    
+    pred_cohort.rename(columns={'age_at_tx':'AGE_AT_TX','person_id':'ID','sex':'SEX', 'CYCLO':'CYCLOSPORINE_TROUGH_LEVEL',
+                                'TAC':"TACROLIMUS_TROUGH_LEVEL",'CREATININE' : "SERUM_CREATININE"}, inplace=True)
+    
+    return pred_cohort
     
 
 def main(pats_path, smoke_path, inds_path, dhd_path, events_path, labs_path, meds_path, deaths_path, outdir):
@@ -634,7 +696,7 @@ def main(pats_path, smoke_path, inds_path, dhd_path, events_path, labs_path, med
     # pick a date for each patient from which to predict.
     # Use the minimum date with the maximum features.
     print("Getting final cohort for predictions...")
-    prediction_cohort = get_prediction_cohort(cohort)
+    prediction_cohort = get_prediction_cohort_random(cohort)
     print("Saving prediction cohort csv to pass to model...")
     prediction_cohort.to_csv(os.path.join(outdir, 'prediction_cohort.csv'), index=False)
     
