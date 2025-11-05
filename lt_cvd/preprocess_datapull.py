@@ -600,9 +600,9 @@ def get_prediction_cohort_random(cohort):
             cohort.loc[years_to_censor<year+0.25 ,col_name] = np.nan
     varying_cols = lab_cols + ['DM', 'HTN', 'LIP', 'CV_HISTORY', 'ANTI_HTN', 'ANTI_PLATELET', 'STATIN', 'MONTHS_TO_EVENT']
     random_years=[]
-    for idx, censor_time in cohort['years_to_censor'].items():
+    for idx, censor_time in years_to_censor.items():
         # eligible years = those that are before censor time
-        eligible_years = [y for y in years if censor_time >= y=0.25]
+        eligible_years = [y for y in years if censor_time >= (y+0.25)]
         if len(eligible_years) == 0:
             random_years.append(np.nan)
         else:

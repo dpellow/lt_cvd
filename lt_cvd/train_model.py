@@ -111,6 +111,8 @@ def main(subjects_file, outdir):
     # load the cohort
     df = pd.read_csv(subjects_file)
     
+    os.path.makedirs(outdir, exist_ok=True)
+    
     # process df into correct format
     if not os.path.exists(os.path.join(outdir,'preprocessed_cohort_LONG.csv')):
         df = process_df(df)
