@@ -56,7 +56,7 @@ def process_df(df):
                                         (df_long['YRS_SINCE_TRANS'] * 365.25).round().astype(int), unit="D") 
     df_long['MONTHS_TO_EVENT'] = (df_long['MONTHS_TO_EVENT'].fillna((df_long['CENSOR_DATE'] - df_long['anchor_dates']).dt.days / 30.4)).round()
     
-    df_long = df_long.drop(columns = ['transplant_date','CENSOR_DATE','anchor_dates',"YRS_TO_CENSOR"])
+    df_long = df_long.drop(columns = ['transplant_date','CENSOR_DATE','anchor_dates'])
     
     df_long = df_long.rename(columns={'age_at_tx':'AGE_AT_TX','person_id':'ID','sex':'SEX', 'CYCLO':'CYCLOSPORINE_TROUGH_LEVEL',
                                 'TAC':"TACROLIMUS_TROUGH_LEVEL",'CREATININE' : "SERUM_CREATININE"})
@@ -100,8 +100,8 @@ def normalize_df(df, normalizer,n_bins=50):
 def run_test(test_df, train_df, rsf, outdir):
     
     # select a random time for each patient
-    test_df_single_times = (train_df.groupby("ID", group_keys=False).sample(n=1, random_state=54213))    
-    preds = run_predictions(test_df,rsf)
+    test_df_single_times = (test_df.groupby("ID", group_keys=False).sample(n=1, random_state=54213))    
+    preds = run_predictions(test_df_single_times,rsf)
         
     c_ind, brier, cd_auc, wm_sae, binned_results   = run_evaluations(preds, test_df_single_times, train_df)
     
