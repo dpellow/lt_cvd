@@ -28,9 +28,9 @@ def process_df(df):
                           'CANCER', 'HEP', 'FULM', 'IMMUNE', 'RE_TX']
     var_col_names = ['ALT', 'ALP', 'AST', 'BMI', 'CREATININE', 'CYCLO', 'TAC', 'DM', 'HTN', 'LIP', 'CV_HISTORY', 'ANTI_HTN', 'ANTI_PLATELET', 'STATIN', 'MONTHS_TO_EVENT']
     new_cols = ['YRS_SINCE_TRANS',"CURR_AGE"]
+    df['transplant_date'] = pd.to_datetime(df['transplant_date'])
     max_year = int((pd.to_datetime(project_lists.STUDY_CUTOFF_DATE) - df['transplant_date'].min()).days / 365.25)
     years = list(range(1, max_year + 1))
-    df['transplant_date'] = pd.to_datetime(df['transplant_date'])
     df['CENSOR_DATE'] = pd.to_datetime(df['CENSOR_DATE'])
     
     
@@ -111,7 +111,7 @@ def main(subjects_file, outdir):
     # load the cohort
     df = pd.read_csv(subjects_file)
     
-    os.path.makedirs(outdir, exist_ok=True)
+    os.makedirs(outdir, exist_ok=True)
     
     # process df into correct format
     if not os.path.exists(os.path.join(outdir,'preprocessed_cohort_LONG.csv')):
