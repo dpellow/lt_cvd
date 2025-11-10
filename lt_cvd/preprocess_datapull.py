@@ -485,7 +485,8 @@ def get_cohort_info(cohort, processed_events, outdir):
                                      'Median':median,
                                      'Lower':lower_q, 'Upper':upper_q}
     processed_events = processed_events[processed_events['diagnosis_date'] >= (processed_events['transplant_date'] + pd.DateOffset(months=15))]
-    
+    processed_events = processed_events[processed_events['person_id'].isin(cohort['person_id'])]
+   
     # times between events for the same patient
     times_df = processed_events[['person_id','diagnosis_date','transplant_date']].copy()
     times_df = times_df.drop_duplicates(subset=['person_id','diagnosis_date'])
