@@ -3,7 +3,8 @@ import pandas as pd
 import numpy as np
 from sklearn.preprocessing import KBinsDiscretizer
 import project_lists
-
+import shap
+from matplotlib import pyplot as plt
 from run_model import run_predictions, run_evaluations, save_results
 
 from sksurv.ensemble import RandomSurvivalForest
@@ -105,7 +106,39 @@ def run_test(test_df, train_df, rsf, outdir):
         
     c_ind, brier, cd_auc, wm_sae, binned_results   = run_evaluations(preds, test_df_single_times, train_df)
     
-    save_results(preds, c_ind, brier, cd_auc, wm_sae, binned_results, outdir)   
+    save_results(preds, c_ind, brier, cd_auc, wm_sae, binned_results, outdir)
+    
+
+class RSFPredictWrapper:
+    """Callable wrapper around an RSF model to make it picklable."""
+    def __init__(self, rsf, t_eval):
+        self.rsf = rsf
+        self.t_eval = t_eval
+
+    def __call__(self, X):
+        surv_fns = self.rsf.predict_survival_function(X)
+        risk_scores = np.array([1 - fn(self.t_eval[0]) for fn in surv_fns])
+        return risk_scores
+
+def run_shap(test_df, train_df, rsf, outdir, t_eval=120):
+    print("Running SHAP analysis")
+    X_train = train_df.drop(columns=['ID','EVENT','MONTHS_TO_EVENT'])
+    X_test = test_df.drop(columns=['ID','EVENT','MONTHS_TO_EVENT'])
+    
+    model_fn = RSFPredictWrapper(rsf, t_eval)
+    print("Creating SHAP explainer")
+    explainer = shap.Explainer(model_fn, X_train)
+    print("Calculating SHAP values")
+    shap_values = explainer(X_test)
+    shap.summary_plot(shap_values, X_test, feature_names=X_test.columns, show=False,
+                      max_display=15, plot_size=[12,10])
+    plt.tight_layout()
+    plt.xticks(fontsize=14)
+    plt.savefig(os.path.join(outdir, 'shap_summary_plot.png'),dpi=400)
+    plt.close()
+    return shap_values
+    
+    
 
 def main(subjects_file, outdir):
     # load the cohort
@@ -145,6 +178,8 @@ def main(subjects_file, outdir):
         
     # run evalution on the test set
     run_test(test_df, train_df, rsf,outdir)
+    
+    run_shap(test_df, train_df, rsf, outdir)
 
 if __name__ == '__main__':
     
