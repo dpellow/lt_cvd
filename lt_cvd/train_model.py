@@ -21,7 +21,40 @@ def train_model(train):
     rsf.fit(X,y)
     
     return rsf
-    
+
+def train_model_grid(train, n_iters = 10):
+    grid = { 'max_depth': [7,8,9], 'n_estimators': [100, 250, 500]}
+    train['MONTHS_TO_EVENT'] = train['MONTHS_TO_EVENT'].round()
+    max_month = int(train['MONTHS_TO_EVENT'].max())
+    res_dict = {}
+    for i in range(n_iters): 
+        ids = pd.Series(train['ID'].unique())
+        ids = ids.sample(frac=1).reset_index(drop=True)  # shuffle ids
+        TRAIN_FRAC = 0.8
+        train_df = train[train['ID'].isin(ids[:int(TRAIN_FRAC*len(ids))])]
+        val = train[train['ID'].isin(ids[int(TRAIN_FRAC*len(ids)):])] 
+        val = val.groupby("ID", group_keys=False).sample(n=1))    
+        for d in grid['max_depth']:
+            for n in grid['n_estimators']:
+                print(f"Training model with max_depth={d}, n_estimators={n}")
+                rsf = RandomSurvivalForest(max_depth = d, n_estimators = n)
+                X = train_df[[c for c in train_df.columns if c not in ['MONTHS_TO_EVENT','EVENT', 'ID']]]
+                y = Surv.from_dataframe('EVENT', 'MONTHS_TO_EVENT', train_df)
+                rsf.fit(X,y)
+                preds = run_predictions(val, rsf)
+                c_ind, _, _, _, _   = run_evaluations(preds, val, train_df)
+                res_dict[(d,n)] = res_dict.get((d,n), []) + [c_ind]
+    # get best params
+    avg_res = {k: np.mean(v) for k,v in res_dict.items()}
+    best_params = max(avg_res, key=avg_res.get)
+    print(f"Best params: max_depth={best_params[0]}, n_estimators={best_params[1]}")
+    # train final model
+    rsf = RandomSurvivalForest(max_depth = best_params[0], n_estimators = best_params[1])
+    X = train[[c for c in train.columns if c not in ['MONTHS_TO_EVENT','EVENT', 'ID']]]
+    y = Surv.from_dataframe('EVENT', 'MONTHS_TO_EVENT', train)
+    rsf.fit(X,y)
+    return rsf, (best_params[0], best_params[1])
+                
 
 def process_df(df):
     data=[]
@@ -109,6 +142,56 @@ def run_test(test_df, train_df, rsf, outdir):
     save_results(preds, c_ind, brier, cd_auc, wm_sae, binned_results, outdir)
     
 
+def process_binned(binned_results_list):
+   
+    combined = pd.concat([df.reset_index(drop=True) for df in binned_results_list], keys=range(len(binned_results_list)))
+    # Compute mean and std
+    mean_df = combined.groupby(level=1).mean()
+    std_df = combined.groupby(level=1).std()
+
+    # Combine and flatten column names
+    summary_df = pd.concat({'mean': mean_df, 'std': std_df}, axis=1)
+    summary_df.columns = [f"{col}_{stat}" for stat, col in summary_df.columns]
+    
+    return summary_df
+
+def save_results_bootstrapped(c_inds, briers, cd_aucs, wm_saes, binned_results_list, outdir):
+    print("Saving results")
+    
+    binned_results = process_binned(binned_results_list)
+    
+    with open(os.path.join(outdir, 'metrics_bootstrapped.txt'), 'w') as f:
+        f.write(f"Concordance index: {np.mean(c_inds)} +/- {np.std(c_inds)}\n")
+        f.write(f"Brier score: {np.mean(briers)} +/- {np.std(briers)}\n")
+        f.write(f"CD-AUC: {np.mean(cd_aucs)} +/- {np.std(cd_aucs)}\n")
+        f.write(f"wm-SAE: {np.mean(wm_saes)} +/- {np.std(wm_saes)}\n")
+        
+    binned_results.to_csv(os.path.join(outdir, 'binned_calibration_bootstrapped.csv'))
+    print("Results saved")
+
+def run_test_bootstrap(test_df, train_df, rsf, outdir, n_runs=50):
+    # TODO: Maybe implement this so that it randomizes the train/test split too
+    # the issues is that the normalizer and model would need to be retrained each time
+    print("Running with 50 randomized test times")
+    c_inds = []
+    briers = []
+    cd_aucs = []
+    wm_saes = []
+    binned_results_list = []
+    for i in range(n_runs):
+        test_df_single_times = (test_df.groupby("ID", group_keys=False).sample(n=1))    
+        preds = run_predictions(test_df_single_times,rsf)
+        
+        c_ind, brier, cd_auc, wm_sae, binned_results = run_evaluations(preds, test_df_single_times, train_df)
+        
+        c_inds.append(c_ind)
+        briers.append(brier)
+        cd_aucs.append(cd_auc)
+        wm_saes.append(wm_sae)
+        binned_results_list.append(binned_results)
+    save_results_bootstrapped(c_inds, briers, cd_aucs, wm_saes, binned_results_list, outdir)
+    
+
 class RSFPredictWrapper:
     """Callable wrapper around an RSF model to make it picklable."""
     def __init__(self, rsf, t_eval):
@@ -120,7 +203,7 @@ class RSFPredictWrapper:
         risk_scores = np.array([1 - fn(self.t_eval[0]) for fn in surv_fns])
         return risk_scores
 
-def run_shap(test_df, train_df, rsf, outdir, t_eval=120):
+def run_shap(test_df, train_df, rsf, outdir, t_eval=[120]):
     print("Running SHAP analysis")
     X_train = train_df.drop(columns=['ID','EVENT','MONTHS_TO_EVENT'])
     X_test = test_df.drop(columns=['ID','EVENT','MONTHS_TO_EVENT'])
@@ -166,18 +249,21 @@ def main(subjects_file, outdir):
     test_df = normalize_df(test_df, norm)
     
     # train model
-    rsf = train_model(train_df)
+    rsf, best_params = train_model_grid(train_df)
     
     # save the model
-    if not os.path.exists(outdir):
-        os.makedirs(outdir)
+    # save the parameters in a txt file
+    with open(os.path.join(outdir,'best_params.txt'),'w') as f:
+        f.write(f"max_depth: {best_params[0]}\n")
+        f.write(f"n_estimators: {best_params[1]}\n")
+        
     with open(os.path.join(outdir,'rsf.pkl'),'wb') as f:
         pickle.dump(rsf,f)
     with open(os.path.join(outdir,'norm.pkl'),'wb') as f:
         pickle.dump(norm,f)
         
     # run evalution on the test set
-    run_test(test_df, train_df, rsf,outdir)
+    run_test_bootstrap(test_df, train_df, rsf,outdir)
     
     run_shap(test_df, train_df, rsf, outdir)
 

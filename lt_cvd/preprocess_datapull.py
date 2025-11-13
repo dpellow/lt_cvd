@@ -312,6 +312,58 @@ def process_events(cohort, events):
     return cohort, merged
 
 
+def get_cv_event_debugging_info(cohort, events):
+    events['diagnosis_date'] = pd.to_datetime(events['diagnosis_date'], format='mixed')
+    
+    # drop anything here that is not coded as a CV event
+    events = events[events['icd10_code'].str.startswith(tuple(project_lists.CV_CODES))]
+    events = events[events['person_id'].isin(cohort['person_id'])]
+    
+    # print off the following info:
+    # number of patients for which any given icd10_code occurs
+    # for the top ones of those: 
+    #   # that were more that 1 year pre-transplant
+    #   # that were in the 1 year pre-transplat
+    #   # that were in the 1.25 years post-transplant
+    #   # that were more than 1.25 years post-transplant
+    
+    # get the unique icd10_codes per patient
+    code_stats = {}
+    for code in events['icd10_code'].unique():
+        code_df = events[events['icd10_code'] == code]
+        unique_pats = code_df['person_id'].nunique()
+        pre_1yr = 0
+        pre_tx = 0
+        post_1_25yr = 0
+        post_1_25yr_plus = 0
+        
+        for idx, row in code_df.iterrows():
+            pat_tx_date = cohort.loc[cohort['person_id'] == row['person_id'], 'transplant_date'].values[0]
+            delta_days = (row['diagnosis_date'] - pat_tx_date).days
+            
+            if delta_days < -365:
+                pre_1yr += 1
+            elif -365 <= delta_days < 0:
+                pre_tx += 1
+            elif 0 <= delta_days <= 456.5:
+                post_1_25yr += 1
+            else:
+                post_1_25yr_plus += 1
+        code_stats[code] = {'unique_patients': unique_pats,
+                            'pre_1yr': pre_1yr,
+                            'pre_tx': pre_tx,
+                            'post_1_25yr': post_1_25yr,
+                            'post_1_25yr_plus': post_1_25yr_plus}
+    # sort by unique patients
+    sorted_stats = dict(sorted(code_stats.items(), key=lambda item: item[1]['unique_patients'], reverse=True))
+    print("CV Event ICD10 Code Stats:")
+    for code, stats in sorted_stats.items():
+        print(f"Code: {code}, Unique Patients: {stats['unique_patients']}, Pre-1yr: {stats['pre_1yr']}, Pre-Tx: {stats['pre_tx']}, Post-1.25yr: {stats['post_1_25yr']}, Post-1.25yr+: {stats['post_1_25yr_plus']}")
+    sorted_stats_df = pd.DataFrame.from_dict(sorted_stats, orient='index')
+    return sorted_stats_df
+                
+
+
 def process_labs(cohort, labs):
     ''' LABS_CTE table processing.
         columns:
@@ -643,6 +695,10 @@ def get_prediction_cohort_random(cohort):
     return pred_cohort
     
 
+    
+
+
+
 def main(pats_path, smoke_path, inds_path, dhd_path, events_path, labs_path, meds_path, deaths_path, outdir):
     
     pats = pd.read_csv(pats_path)
@@ -676,6 +732,10 @@ def main(pats_path, smoke_path, inds_path, dhd_path, events_path, labs_path, med
     
     print("Processing cardiovascular events...")
     cohort, processed_events = process_events(cohort, events)
+    
+    sorted_stats_df = get_cv_event_debugging_info(cohort, events)
+    sorted_stats_df.to_csv(os.path.join(outdir, 'cv_event_debugging_stats.csv'), index=True)
+    
     
     print("Processing labs...")
     cohort = process_labs(cohort, labs)
