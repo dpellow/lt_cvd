@@ -25,7 +25,6 @@ def train_model(train):
 def train_model_grid(train, n_iters = 10):
     grid = { 'max_depth': [7,8,9], 'n_estimators': [100, 250, 500]}
     train['MONTHS_TO_EVENT'] = train['MONTHS_TO_EVENT'].round()
-    max_month = int(train['MONTHS_TO_EVENT'].max())
     res_dict = {}
     for i in range(n_iters): 
         ids = pd.Series(train['ID'].unique())
@@ -33,7 +32,7 @@ def train_model_grid(train, n_iters = 10):
         TRAIN_FRAC = 0.8
         train_df = train[train['ID'].isin(ids[:int(TRAIN_FRAC*len(ids))])]
         val = train[train['ID'].isin(ids[int(TRAIN_FRAC*len(ids)):])] 
-        val = val.groupby("ID", group_keys=False).sample(n=1))    
+        val = val.groupby("ID", group_keys=False).sample(n=1)   
         for d in grid['max_depth']:
             for n in grid['n_estimators']:
                 print(f"Training model with max_depth={d}, n_estimators={n}")

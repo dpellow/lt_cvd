@@ -180,9 +180,12 @@ def run_evaluations(preds, df, training_brier_distr):
     print("Evaluating predictions")
     yt = Surv.from_arrays(df['EVENT'], df['MONTHS_TO_EVENT'])
     y = Surv.from_arrays(training_brier_distr['EVENT'], training_brier_distr['MONTHS_TO_EVENT'])
+    
+    max_month = min(int(df['MONTHS_TO_EVENT'].max()),int(training_brier_distr['MONTHS_TO_EVENT'].max()))
+    print(max_month)
     c_ind = concordance_index_censored(df['EVENT'].astype(bool), df['MONTHS_TO_EVENT'], preds['10 year risk'])[0]
-    _, brier = brier_score(y, yt, 1-preds['10 year risk'], 120)
-    auc, _ = cumulative_dynamic_auc(y, yt, preds['10 year risk'], [120])
+    _, brier = brier_score(y, yt, 1-preds['10 year risk'], max_month)
+    auc, _ = cumulative_dynamic_auc(y, yt, preds['10 year risk'], [max_month])
     avg_calib, binned_results = compute_binwise_km_calibration(df, preds['10 year risk'], t_eval=120)
     print(f"Concordance index: {c_ind.round(3)}")
     print(f"Brier score: {brier.round(3)}")
