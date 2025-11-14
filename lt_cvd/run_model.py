@@ -181,7 +181,7 @@ def run_evaluations(preds, df, training_brier_distr):
     yt = Surv.from_arrays(df['EVENT'], df['MONTHS_TO_EVENT'])
     y = Surv.from_arrays(training_brier_distr['EVENT'], training_brier_distr['MONTHS_TO_EVENT'])
     
-    max_month = min(int(df['MONTHS_TO_EVENT'].max()),int(training_brier_distr['MONTHS_TO_EVENT'].max()))
+    max_month = min(120,min(int(df['MONTHS_TO_EVENT'].max()),int(training_brier_distr['MONTHS_TO_EVENT'].max())))
     print(max_month)
     c_ind = concordance_index_censored(df['EVENT'].astype(bool), df['MONTHS_TO_EVENT'], preds['10 year risk'])[0]
     _, brier = brier_score(y, yt, 1-preds['10 year risk'], max_month)
