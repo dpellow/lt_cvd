@@ -151,7 +151,13 @@ def compute_binwise_km_calibration(data, preds, t_eval=120):
     results = []
     for label in labels:
         bin_df = data[data['bin'] == label]
-
+        if len(bin_df) == 0:
+            results.append({'bin': label,
+                            'n': 0,
+                            'mean_pred': np.nan,
+                            'km_event_rate': np.nan,
+                            'abs_error': np.nan})
+            continue
         surv_data = make_structured_array(bin_df['EVENT'], bin_df['MONTHS_TO_EVENT'])
         
         kmf = KaplanMeierFitter()
@@ -181,7 +187,7 @@ def run_evaluations(preds, df, training_brier_distr):
     yt = Surv.from_arrays(df['EVENT'], df['MONTHS_TO_EVENT'])
     y = Surv.from_arrays(training_brier_distr['EVENT'], training_brier_distr['MONTHS_TO_EVENT'])
     
-    max_month = min(120,min(int(df['MONTHS_TO_EVENT'].max()),int(training_brier_distr['MONTHS_TO_EVENT'].max())))
+    max_month = min(120,min(int(df['MONTHS_TO_EVENT'].max()),int(training_brier_distr['MONTHS_TO_EVENT'].max()))-1)
     print(max_month)
     c_ind = concordance_index_censored(df['EVENT'].astype(bool), df['MONTHS_TO_EVENT'], preds['10 year risk'])[0]
     _, brier = brier_score(y, yt, 1-preds['10 year risk'], max_month)
