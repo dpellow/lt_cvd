@@ -9,6 +9,7 @@ from run_model import run_predictions, run_evaluations, save_results
 
 from sksurv.ensemble import RandomSurvivalForest
 from sksurv.util import Surv
+import shap
 
 
 def train_model(train):
@@ -143,7 +144,7 @@ def run_test(test_df, train_df, rsf, outdir):
 
 def process_binned(binned_results_list):
    
-    combined = pd.concat([df.reset_index(drop=True) for df in binned_results_list], keys=range(len(binned_results_list)))
+    combined = pd.concat([df[['n','mean_pred','km_event_rate','abs_error']].reset_index(drop=True) for df in binned_results_list], keys=range(len(binned_results_list)))
     # Compute mean and std
     mean_df = combined.groupby(level=1).mean()
     std_df = combined.groupby(level=1).std()

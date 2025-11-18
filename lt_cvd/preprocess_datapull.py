@@ -354,11 +354,23 @@ def get_cv_event_debugging_info(cohort, events):
                             'pre_tx': pre_tx,
                             'post_1_25yr': post_1_25yr,
                             'post_1_25yr_plus': post_1_25yr_plus}
+        pre_1yr_df = code_df[code_df['diagnosis_date'] < (pat_tx_date - pd.DateOffset(years=1))]
+        pre_tx_df = code_df[(code_df['diagnosis_date'] >= (pat_tx_date - pd.DateOffset(years=1))) & (code_df['diagnosis_date'] < pat_tx_date)]
+        post_1_25yr_df = code_df[(code_df['diagnosis_date'] >= pat_tx_date) & (code_df['diagnosis_date'] <= (pat_tx_date + pd.DateOffset(years=1, months=3)))]
+        post_1_25yr_plus_df = code_df[code_df['diagnosis_date'] > (pat_tx_date + pd.DateOffset(years=1, months=3))]
+        code_stats[code]['pre_1yr_unique'] = pre_1yr_df['person_id'].nunique()
+        code_stats[code]['pre_tx_unique'] = pre_tx_df['person_id'].nunique()
+        code_stats[code]['post_1_25yr_unique'] = post_1_25yr_df['person_id'].nunique()
+        code_stats[code]['post_1_25yr_plus_unique'] = post_1_25yr_plus_df['person_id'].nunique()
+        
+        
     # sort by unique patients
     sorted_stats = dict(sorted(code_stats.items(), key=lambda item: item[1]['unique_patients'], reverse=True))
     print("CV Event ICD10 Code Stats:")
     for code, stats in sorted_stats.items():
-        print(f"Code: {code}, Unique Patients: {stats['unique_patients']}, Pre-1yr: {stats['pre_1yr']}, Pre-Tx: {stats['pre_tx']}, Post-1.25yr: {stats['post_1_25yr']}, Post-1.25yr+: {stats['post_1_25yr_plus']}")
+        print(f"Code: {code}, Unique Patients: {stats['unique_patients']}, Pre-1yr: {stats['pre_1yr']}, Pre-1yr unique patients: {stats['pre_1yr_unique']}, \
+                Pre-Tx: {stats['pre_tx']}, Pre-Tx unique patients: {stats['pre_tx_unique']} Post-1.25yr: {stats['post_1_25yr']}, Post-1.25yr unique patients: {stats['post_1_25yr_unique']}, \
+                Post-1.25yr+: {stats['post_1_25yr_plus']}, Post-1.25yr+ unique patients: {stats['post_1_25yr_plus_unique']}")
     sorted_stats_df = pd.DataFrame.from_dict(sorted_stats, orient='index')
     return sorted_stats_df
                 
