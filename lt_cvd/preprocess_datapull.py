@@ -318,6 +318,7 @@ def get_cv_event_debugging_info(cohort, events):
     # drop anything here that is not coded as a CV event
     events = events[events['icd10_code'].str.startswith(tuple(project_lists.CV_CODES))]
     events = events[events['person_id'].isin(cohort['person_id'])]
+    first_events = events.sort_values('diagnosis_date').groupby(['person_id','icd10_code']).first().reset_index()
     
     # print off the following info:
     # number of patients for which any given icd10_code occurs
@@ -362,6 +363,10 @@ def get_cv_event_debugging_info(cohort, events):
         code_stats[code]['pre_tx_unique'] = pre_tx_df['person_id'].nunique()
         code_stats[code]['post_1_25yr_unique'] = post_1_25yr_df['person_id'].nunique()
         code_stats[code]['post_1_25yr_plus_unique'] = post_1_25yr_plus_df['person_id'].nunique()
+        code_stats[code]['pre_1yr_first'] = len(first_events[(first_events['icd10_code'] == code) & (first_events['diagnosis_date'] < (pat_tx_date - pd.DateOffset(years=1)))])
+        code_stats[code]['pre_tx_first'] = len(first_events[(first_events['icd10_code'] == code) & (first_events['diagnosis_date'] >= (pat_tx_date - pd.DateOffset(years=1))) & (first_events['diagnosis_date'] < pat_tx_date)])
+        code_stats[code]['post_1_25yr_first'] = len(first_events[(first_events['icd10_code'] == code) & (first_events['diagnosis_date'] >= pat_tx_date) & (first_events['diagnosis_date'] <= (pat_tx_date + pd.DateOffset(years=1, months=3)))])
+        code_stats[code]['post_1_25yr_plus_first'] = len(first_events[(first_events['icd10_code'] == code) & (first_events['diagnosis_date'] > (pat_tx_date + pd.DateOffset(years=1, months=3)))])
         
         
     # sort by unique patients
@@ -370,7 +375,8 @@ def get_cv_event_debugging_info(cohort, events):
     for code, stats in sorted_stats.items():
         print(f"Code: {code}, Unique Patients: {stats['unique_patients']}, Pre-1yr: {stats['pre_1yr']}, Pre-1yr unique patients: {stats['pre_1yr_unique']}, \
                 Pre-Tx: {stats['pre_tx']}, Pre-Tx unique patients: {stats['pre_tx_unique']} Post-1.25yr: {stats['post_1_25yr']}, Post-1.25yr unique patients: {stats['post_1_25yr_unique']}, \
-                Post-1.25yr+: {stats['post_1_25yr_plus']}, Post-1.25yr+ unique patients: {stats['post_1_25yr_plus_unique']}")
+                Post-1.25yr+: {stats['post_1_25yr_plus']}, Post-1.25yr+ unique patients: {stats['post_1_25yr_plus_unique']}, First pre-1yr: {stats['pre_1yr_first']}, \
+                First pre-tx: {stats['pre_tx_first']}, First post-1.25yr: {stats['post_1_25yr_first']}, First post-1.25yr+: {stats['post_1_25yr_plus_first']}")
     sorted_stats_df = pd.DataFrame.from_dict(sorted_stats, orient='index')
     return sorted_stats_df
                 
